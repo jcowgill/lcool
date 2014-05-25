@@ -4,11 +4,11 @@ LCool is a compiler for the Cool programming language that uses LLVM as its back
 ## Compiling
 This project is written in C++ and uses CMake as its build system. To compile and install it, run something like:
 
-    mkdir build
-    cd build
-    cmake ..
-    make
-    make install
+	mkdir build
+	cd build
+	cmake ..
+	make
+	make install
 
 ## License
 Copyright (C) 2014 James Cowgill
