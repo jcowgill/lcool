@@ -22,7 +22,8 @@ find_package(LLVM REQUIRED COMPONENTS support)
 # Compile compiler using sources
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 add_executable(lcoolc
-	"${SRC_DIR}/blob.cpp"
+	"${SRC_DIR}/ast.cpp"
+	"${SRC_DIR}/ast.hpp"
 )
 
 # Set options
