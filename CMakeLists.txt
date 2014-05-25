@@ -10,9 +10,9 @@ set(LCOOL_VERSION_MINOR 1)
 # Add local modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
-# Enable C++11 and warnings
-if(UNIX)
-	list(APPEND CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra -pedantic")
+# Enable GCC flags
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_COMPILER_IS_GNUCXX)
+	list(APPEND CMAKE_CXX_FLAGS "--std=c++0x -Wall -Wextra -pedantic")
 endif()
 
 # Find LLVM and Boost
@@ -26,5 +26,5 @@ add_executable(lcoolc
 )
 
 # Set options
-include_directories(${BOOST_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
+include_directories(${SRC_DIR} ${BOOST_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
 target_link_libraries(lcoolc ${BOOST_LIBRARIES} ${LLVM_LIBRARIES})
