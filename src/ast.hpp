@@ -24,6 +24,8 @@
 #include <string>
 #include <vector>
 
+#include "logger.hpp"
+
 namespace lcool { namespace ast
 {
 	class expr_visitor;
@@ -41,6 +43,16 @@ namespace lcool { namespace ast
 		 * @param visitor class containing methods to call
 		 */
 		virtual void accept(expr_visitor& visitor) = 0;
+
+		/** The location of the start of this expression */
+		location loc;
+
+	protected:
+		/** Construct an expression with its location */
+		explicit expr(const location& loc)
+			: loc(loc)
+		{
+		}
 	};
 
 	/** A fixed type and an initial value for a new variable / attribute */
@@ -58,6 +70,7 @@ namespace lcool { namespace ast
 	class assign : public expr
 	{
 	public:
+		assign(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** Identifier to assign to */
@@ -71,6 +84,7 @@ namespace lcool { namespace ast
 	class dispatch : public expr
 	{
 	public:
+		dispatch(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** Name of method to call */
@@ -90,6 +104,7 @@ namespace lcool { namespace ast
 	class conditional : public expr
 	{
 	public:
+		conditional(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** Predicate to test on */
@@ -106,6 +121,7 @@ namespace lcool { namespace ast
 	class loop : public expr
 	{
 	public:
+		loop(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** Predicate to test on */
@@ -119,6 +135,7 @@ namespace lcool { namespace ast
 	class block : public expr
 	{
 	public:
+		block(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** List of statements, last statement is the value of the block */
@@ -129,6 +146,7 @@ namespace lcool { namespace ast
 	class let : public expr
 	{
 	public:
+		let(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** List of variables to declare */
@@ -156,6 +174,7 @@ namespace lcool { namespace ast
 	class type_case : public expr
 	{
 	public:
+		type_case(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** Value to test type of */
@@ -169,6 +188,7 @@ namespace lcool { namespace ast
 	class new_object : public expr
 	{
 	public:
+		new_object(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** Type of the new object */
@@ -179,26 +199,29 @@ namespace lcool { namespace ast
 	class constant_bool : public expr
 	{
 	public:
+		constant_bool(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** Value of the constant */
-		bool value;
+		bool value = false;
 	};
 
 	/** Constant integer */
 	class constant_int : public expr
 	{
 	public:
+		constant_int(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** Value of the constant */
-		int32_t value;
+		int32_t value = 0;
 	};
 
 	/** Constant string */
 	class constant_string : public expr
 	{
 	public:
+		constant_string(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** Value of the constant (processed to remove escape codes) */
@@ -209,6 +232,7 @@ namespace lcool { namespace ast
 	class identifier : public expr
 	{
 	public:
+		identifier(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** Identifier to read */
@@ -219,6 +243,7 @@ namespace lcool { namespace ast
 	class compute_unary : public expr
 	{
 	public:
+		compute_unary(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** Types of unary operations */
@@ -240,6 +265,7 @@ namespace lcool { namespace ast
 	class compute_binary : public expr
 	{
 	public:
+		compute_binary(const location& loc) : expr(loc) { }
 		virtual void accept(expr_visitor& visitor);
 
 		/** Types of unary operations */
@@ -293,6 +319,9 @@ namespace lcool { namespace ast
 	class method
 	{
 	public:
+		/** Method location */
+		location loc;
+
 		/** Return type */
 		std::string type;
 
@@ -307,6 +336,9 @@ namespace lcool { namespace ast
 	class cls
 	{
 	public:
+		/** Class location */
+		location loc;
+
 		/** Parent of the class (inherits from) */
 		boost::optional<std::string> parent;
 
