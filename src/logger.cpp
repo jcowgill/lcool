@@ -26,7 +26,7 @@ std::string lcool::location::to_string() const
 	return boost::str(boost::format("%1%:%2%:%3%") % filename % line % column);
 }
 
-std::ostream& operator<< (std::ostream& stream, const lcool::location& loc)
+std::ostream& lcool::operator<< (std::ostream& stream, const lcool::location& loc)
 {
 	return stream << loc.to_string();
 }
