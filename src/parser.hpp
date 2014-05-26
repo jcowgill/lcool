@@ -28,12 +28,12 @@ namespace lcool
 	/**
 	 * Parses the given input file into the output program
 	 *
-	 * @param filename the name of the file being parsed
 	 * @param input    the input stream containing the file data
+	 * @param filename the name of the file being parsed
 	 * @param log      the logger to print any errors / warnings to
 	 * @return the list of parsed classes
 	 */
-	ast::program parse(const std::string& filename, std::istream& input, logger& log);
+	ast::program parse(std::istream& input, const std::string& filename, logger& log);
 }
 
 #endif
