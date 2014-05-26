@@ -15,5 +15,37 @@
  * along with LCool.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define BOOST_SPIRIT_UNICODE
+
+#include <boost/spirit/include/qi.hpp>
+//#include <boost/spirit/include/support.hpp>
+
 #include "ast.hpp"
+#include "logger.hpp"
 #include "parser.hpp"
+
+namespace qi = boost::spirit::qi;
+namespace unicode = boost::spirit::unicode;
+
+namespace ast = lcool::ast;
+
+namespace
+{
+	// The cool grammar object
+	template <typename Iterator>
+	class cool_grammar : qi::grammar<Iterator, ast::program(), unicode::space_type>
+	{
+	};
+}
+
+ast::program parse(
+	const std::string& filename,
+	std::istream& input,
+	lcool::logger& log)
+{
+	ast::program class_map;
+
+	// utf8 to u32 needed
+
+	return class_map;
+}
