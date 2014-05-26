@@ -12,7 +12,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
 # Enable GCC flags
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_COMPILER_IS_GNUCXX)
-	list(APPEND CMAKE_CXX_FLAGS "--std=c++0x -Wall -Wextra -pedantic")
+	list(APPEND CMAKE_CXX_FLAGS "--std=c++11 -Wall -Wextra -pedantic")
 endif()
 
 # Find LLVM and Boost
@@ -24,6 +24,8 @@ set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 add_executable(lcoolc
 	"${SRC_DIR}/ast.cpp"
 	"${SRC_DIR}/ast.hpp"
+	"${SRC_DIR}/logger.cpp"
+	"${SRC_DIR}/logger.hpp"
 	"${SRC_DIR}/parser.cpp"
 	"${SRC_DIR}/parser.hpp"
 )
