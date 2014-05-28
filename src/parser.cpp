@@ -24,6 +24,7 @@
 
 namespace spirit = boost::spirit;
 namespace qi = boost::spirit::qi;
+namespace enc = boost::spirit::ascii;
 
 namespace ast = lcool::ast;
 
@@ -37,11 +38,18 @@ namespace
 		cool_skipper()
 			: cool_skipper::base_type(start)
 		{
-			start = spirit::ascii::space;
+			// Skip spaces, line comments or multi-line comments
+			start = enc::space
+			      | single_comment
+			      | multi_comment;
+
+			// Rules for different comment styles
+			single_comment = "--" >> *(enc::char_ - qi::eol);
+			multi_comment  = "(*" >> *(multi_comment | (enc::char_ - "*)")) >> "*)";
 		}
 
 	private:
-		qi::rule<Iterator> start;
+		qi::rule<Iterator> start, single_comment, multi_comment;
 	};
 
 	// The cool grammar object
@@ -53,9 +61,15 @@ namespace
 		template <typename Result>
 		using rule = qi::rule<Iterator, Result, cool_skipper<Iterator>>;
 
+		static ast::program blank_prog()
+		{
+			return ast::program();
+		}
+
 		cool_grammar(const std::string& filename, lcool::logger& log)
 			: cool_grammar::base_type(start)
 		{
+			start = qi::lit("1")[&blank_prog] >> qi::eoi;
 		}
 
 	private:
@@ -63,7 +77,7 @@ namespace
 	};
 }
 
-ast::program parse(
+ast::program lcool::parse(
 	std::istream& input,
 	const std::string& filename,
 	lcool::logger& log)
@@ -88,4 +102,13 @@ ast::program parse(
 	}
 
 	return class_map;
+}
+
+#include <iostream>
+
+int main(void)
+{
+	lcool::logger_ostream log;
+	lcool::parse(std::cin, "", log);
+	return 0;
 }
