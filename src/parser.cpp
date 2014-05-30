@@ -46,6 +46,12 @@ namespace
 			// Rules for different comment styles
 			single_comment = "--" >> *(enc::char_ - qi::eol);
 			multi_comment  = "(*" >> *(multi_comment | (enc::char_ - "*)")) >> "*)";
+
+			#if 1
+			start.name("start");                   qi::debug(start);
+			single_comment.name("single_comment"); qi::debug(single_comment);
+			multi_comment.name("multi_comment");   qi::debug(multi_comment);
+			#endif
 		}
 
 	private:
@@ -69,11 +75,115 @@ namespace
 		cool_grammar(const std::string& filename, lcool::logger& log)
 			: cool_grammar::base_type(start)
 		{
-			start = qi::lit("1")[&blank_prog] >> qi::eoi;
+			using enc::char_;
+			using qi::int_parser;
+			using qi::lexeme;
+			using qi::lit;
+			using qi::string;
+
+			// Terminals
+			term_id   = lexeme[char_("A-Za-z_") >> *char_("A-Za-z0-9_")];
+			term_type = term_id;
+			term_int  = int_parser<int32_t>();
+			term_bool = string("true") | string("false");
+			term_str  = lexeme[char_('"')
+			            >> *(char_('\\') >> char_ | (char_ - '\n' - '\\' - '"'))
+			            >> char_('"')];
+
+			// Start rule
+			// TODO start = qi::lit("1")[&blank_prog] >> qi::eoi;
+			start = *cls >> qi::eoi;
+
+			// Classes
+			// TODO Should the final semicolon be optional?
+			cls = "class" >> term_type >> -("inherits" >> term_type)
+			      >>'{' >> *feature >> '}' >> ';';
+
+			// Features (method or attribute)
+			// TODO Left factor this?
+			// TODO Should the final semicolon be optional?
+			feature   = method >> ';'
+			          | attribute >> ';';
+
+			method    = term_id >> '(' >> -((term_id >> ':' >> term_type) % ',') >> ')'
+			            >> ':' >> term_type >> '{' >> expr >> '}';
+			attribute = term_id >> ':' >> term_type >> -("<-" >> expr);
+
+			// Expressions
+			// TODO and, or, >, >= operators??
+			expr = *(term_id >> "<-") >> not_expr;
+
+			not_expr = *lit("not") >> comp_expr;
+
+			comp_expr = add_expr
+			    >> *("<=" >> add_expr |
+			          "<" >> add_expr |
+			          "=" >> add_expr);
+
+			add_expr = mult_expr
+			    >> *('+' >> mult_expr |
+			         '-' >> mult_expr);
+
+			mult_expr = isvoid_expr
+			    >> *('*' >> isvoid_expr |
+			         '/' >> isvoid_expr);
+
+			isvoid_expr = *lit("isvoid") >> negate_expr;
+
+			negate_expr = *lit('~') >> dispatch_expr;
+
+			dispatch_expr = base_expr
+			    >> *(-('@' >> term_type) >> '.' >> term_id >> '(' >> -(expr % ',') >> ')');
+
+			base_expr = "if" >> expr >> "then" >> expr >> "else" >> expr >> "fi"
+			          | "while" >> expr >> "loop" >> expr >> "pool"
+			          | '{' >> +(expr >> ';') >> '}'
+			          | "let" >> (attribute % ',') >> "in" >> expr
+			          | "case" >> expr >> "of" >> +(term_id >> ':' >> term_type >> "=>" >> expr >> ';') >> "esac"
+			          | "new" >> term_type
+			          | term_id >> '(' >> -(expr % ',') >> ')'
+			          | term_id
+			          | term_int
+			          | term_str
+			          | term_bool
+			          | '(' >> expr >> ')';
+
+			#if 1
+			cls.name("cls");                     qi::debug(cls);
+			feature.name("feature");             qi::debug(feature);
+			method.name("method");               qi::debug(method);
+			attribute.name("attribute");         qi::debug(attribute);
+			expr.name("expr");                   qi::debug(expr);
+			not_expr.name("not_expr");           qi::debug(not_expr);
+			comp_expr.name("comp_expr");         qi::debug(comp_expr);
+			add_expr.name("add_expr");           qi::debug(add_expr);
+			mult_expr.name("mult_expr");         qi::debug(mult_expr);
+			isvoid_expr.name("isvoid_expr");     qi::debug(isvoid_expr);
+			negate_expr.name("negate_expr");     qi::debug(negate_expr);
+			dispatch_expr.name("dispatch_expr"); qi::debug(dispatch_expr);
+			base_expr.name("base_expr");         qi::debug(base_expr);
+			term_id.name("term_id");             qi::debug(term_id);
+			term_type.name("term_type");         qi::debug(term_type);
+			term_int.name("term_int");           qi::debug(term_int);
+			term_bool.name("term_bool");         qi::debug(term_bool);
+			term_str.name("term_str");           qi::debug(term_str);
+			#endif
 		}
 
 	private:
 		rule<ast::program()> start;
+
+		using rulez = qi::rule<Iterator, cool_skipper<Iterator>>;
+		rulez cls;
+		rulez feature;
+		rulez method;
+		rulez attribute;
+
+		rulez expr;
+		rulez not_expr, comp_expr, add_expr, mult_expr, isvoid_expr, negate_expr, dispatch_expr, base_expr;
+
+		// Terminals
+		rulez term_id, term_type, term_int, term_bool, term_str;
 	};
 }
 
