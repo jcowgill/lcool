@@ -1,0 +1,10 @@
+#!/bin/bash -e
+
+# change to the directory where the script is located
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
+# do the build
+mkdir -p build
+cd build
+cmake .. -Wdev -DCMAKE_BUILD_TYPE=Debug
+make -j4
