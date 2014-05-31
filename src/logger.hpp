@@ -21,6 +21,8 @@
 #include <ostream>
 #include <string>
 
+#include "smart_ptr.hpp"
+
 namespace lcool
 {
 	/** A position in a code file (used for logging errors and debugging) */
@@ -28,7 +30,7 @@ namespace lcool
 	{
 	public:
 		/** Filename of this position */
-		std::string filename;
+		shared_ptr<const std::string> filename;
 
 		/** Start line of the position (first line is 1) */
 		uint32_t line;
