@@ -34,17 +34,16 @@ using lcool::make_unique;
 using lcool::shared_ptr;
 using lcool::unique_ptr;
 
+// ########################
+// Parser Declarations
+// ########################
+
 namespace
 {
 	class parser_base
 	{
 	protected:
-		parser_base(istream& input, const string& filename, lcool::logger& log)
-			: log(log), input(input), filename(make_shared<const string>(filename))
-		{
-			// Disable whitespace skipping on input stream
-			input.unsetf(std::ios::skipws);
-		}
+		parser_base(istream& input, const string& filename, lcool::logger& log);
 
 		lcool::logger& log;
 
@@ -56,19 +55,41 @@ namespace
 	class parser : public parser_base
 	{
 	public:
-		parser(istream& input, const string& filename, lcool::logger& log)
-			: parser_base(input, filename, log)
-		{
-		}
-
-		ast::program parse()
-		{
-			return ast::program();
-		}
+		parser(istream& input, const string& filename, lcool::logger& log);
+		ast::program parse();
 
 	private:
 	};
 }
+
+// ########################
+// parser_base
+// ########################
+
+parser_base::parser_base(istream& input, const string& filename, lcool::logger& log)
+	: log(log), input(input), filename(make_shared<const string>(filename))
+{
+	// Disable whitespace skipping on input stream
+	input.unsetf(std::ios::skipws);
+}
+
+// ########################
+// parser
+// ########################
+
+parser::parser(istream& input, const string& filename, lcool::logger& log)
+	: parser_base(input, filename, log)
+{
+}
+
+ast::program parser::parse()
+{
+	return ast::program();
+}
+
+// ########################
+// External Functions
+// ########################
 
 ast::program lcool::parse(istream& input, const string& filename, lcool::logger& log)
 {
