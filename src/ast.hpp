@@ -20,11 +20,11 @@
 
 #include <boost/optional/optional.hpp>
 #include <map>
-#include <memory>
 #include <string>
 #include <vector>
 
 #include "logger.hpp"
+#include "smart_ptr.hpp"
 
 namespace lcool { namespace ast
 {
@@ -63,7 +63,7 @@ namespace lcool { namespace ast
 		std::string type;
 
 		/** Optional initial value */
-		std::unique_ptr<expr> initial;
+		unique_ptr<expr> initial;
 	};
 
 	/** Expression assigning a value to an identifier */
@@ -77,7 +77,7 @@ namespace lcool { namespace ast
 		std::string id;
 
 		/** Value to assign */
-		std::unique_ptr<expr> value;
+		unique_ptr<expr> value;
 	};
 
 	/** Method dispatch / call expression */
@@ -91,13 +91,13 @@ namespace lcool { namespace ast
 		std::string method_name;
 
 		/** Optional object to call method on (or self) */
-		std::unique_ptr<expr> object;
+		unique_ptr<expr> object;
 
 		/** Static type of the object being called */
 		boost::optional<std::string> object_type;
 
 		/** List of arguments */
-		std::vector<std::unique_ptr<expr>> arguments;
+		std::vector<unique_ptr<expr>> arguments;
 	};
 
 	/** Condition expression (if statement) */
@@ -108,13 +108,13 @@ namespace lcool { namespace ast
 		virtual void accept(expr_visitor& visitor);
 
 		/** Predicate to test on */
-		std::unique_ptr<expr> predicate;
+		unique_ptr<expr> predicate;
 
 		/** Value to return if predicate is true */
-		std::unique_ptr<expr> if_true;
+		unique_ptr<expr> if_true;
 
 		/** Value to return if predicate is false */
-		std::unique_ptr<expr> if_false;
+		unique_ptr<expr> if_false;
 	};
 
 	/** While loop */
@@ -125,10 +125,10 @@ namespace lcool { namespace ast
 		virtual void accept(expr_visitor& visitor);
 
 		/** Predicate to test on */
-		std::unique_ptr<expr> predicate;
+		unique_ptr<expr> predicate;
 
 		/** Body of the loop */
-		std::unique_ptr<expr> body;
+		unique_ptr<expr> body;
 	};
 
 	/** Statement block */
@@ -139,7 +139,7 @@ namespace lcool { namespace ast
 		virtual void accept(expr_visitor& visitor);
 
 		/** List of statements, last statement is the value of the block */
-		std::vector<std::unique_ptr<expr>> statements;
+		std::vector<unique_ptr<expr>> statements;
 	};
 
 	/** Let expression (declares local variables + scope) */
@@ -153,7 +153,7 @@ namespace lcool { namespace ast
 		std::map<std::string, type_and_value> vars;
 
 		/** Let expression body */
-		std::unique_ptr<expr> body;
+		unique_ptr<expr> body;
 	};
 
 	/** An individual branch of a type case expression */
@@ -167,7 +167,7 @@ namespace lcool { namespace ast
 		std::string type;
 
 		/** Body of the branch */
-		std::unique_ptr<expr> body;
+		unique_ptr<expr> body;
 	};
 
 	/** Type case expression (boo hiss) */
@@ -178,7 +178,7 @@ namespace lcool { namespace ast
 		virtual void accept(expr_visitor& visitor);
 
 		/** Value to test type of */
-		std::unique_ptr<expr> value;
+		unique_ptr<expr> value;
 
 		/** List of case branches */
 		std::vector<type_case_branch> branches;
@@ -258,7 +258,7 @@ namespace lcool { namespace ast
 		op_type op;
 
 		/** Sub expression */
-		std::unique_ptr<expr> body;
+		unique_ptr<expr> body;
 	};
 
 	/** Computes some binary operation */
@@ -287,10 +287,10 @@ namespace lcool { namespace ast
 		op_type op;
 
 		/** Left sub expression */
-		std::unique_ptr<expr> left;
+		unique_ptr<expr> left;
 
 		/** Right sub expression */
-		std::unique_ptr<expr> right;
+		unique_ptr<expr> right;
 	};
 
 	/** Visitor class used to traverse expression trees */
@@ -329,7 +329,7 @@ namespace lcool { namespace ast
 		std::map<std::string, std::string> params;
 
 		/** Method body */
-		std::unique_ptr<expr> body;
+		unique_ptr<expr> body;
 	};
 
 	/** AST for a cool class */
