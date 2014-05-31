@@ -46,12 +46,6 @@ namespace
 			// Rules for different comment styles
 			single_comment = "--" >> *(enc::char_ - qi::eol);
 			multi_comment  = "(*" >> *(multi_comment | (enc::char_ - "*)")) >> "*)";
-
-			#if 1
-			start.name("start");                   qi::debug(start);
-			single_comment.name("single_comment"); qi::debug(single_comment);
-			multi_comment.name("multi_comment");   qi::debug(multi_comment);
-			#endif
 		}
 
 	private:
@@ -147,27 +141,6 @@ namespace
 			          | term_str
 			          | term_bool
 			          | '(' >> expr >> ')';
-
-			#if 1
-			cls.name("cls");                     qi::debug(cls);
-			feature.name("feature");             qi::debug(feature);
-			method.name("method");               qi::debug(method);
-			attribute.name("attribute");         qi::debug(attribute);
-			expr.name("expr");                   qi::debug(expr);
-			not_expr.name("not_expr");           qi::debug(not_expr);
-			comp_expr.name("comp_expr");         qi::debug(comp_expr);
-			add_expr.name("add_expr");           qi::debug(add_expr);
-			mult_expr.name("mult_expr");         qi::debug(mult_expr);
-			isvoid_expr.name("isvoid_expr");     qi::debug(isvoid_expr);
-			negate_expr.name("negate_expr");     qi::debug(negate_expr);
-			dispatch_expr.name("dispatch_expr"); qi::debug(dispatch_expr);
-			base_expr.name("base_expr");         qi::debug(base_expr);
-			term_id.name("term_id");             qi::debug(term_id);
-			term_type.name("term_type");         qi::debug(term_type);
-			term_int.name("term_int");           qi::debug(term_int);
-			term_bool.name("term_bool");         qi::debug(term_bool);
-			term_str.name("term_str");           qi::debug(term_str);
-			#endif
 		}
 
 	private:
