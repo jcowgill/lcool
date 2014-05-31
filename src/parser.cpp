@@ -18,6 +18,7 @@
 #include <istream>
 #include <memory>
 #include <string>
+#include <stdexcept>
 
 #include "ast.hpp"
 #include "logger.hpp"
@@ -40,45 +41,89 @@ using lcool::unique_ptr;
 
 namespace
 {
-	class parser_base
+	// Types of token
+	enum token_type
 	{
-	protected:
-		parser_base(istream& input, const string& filename, lcool::logger& log);
+		TOK_EOF,
+	};
 
-		lcool::logger& log;
+	// A token read by the lexer
+	struct token
+	{
+		lcool::location loc;
+		token_type      type;
+		string          value;
+	};
+
+	// Thrown when a parse error occurs
+	//  Nothing is written to the log yet when this is thrown
+	class parse_error : public std::runtime_error
+	{
+	public:
+		parse_error(const lcool::location& loc, const string& msg)
+			: runtime_error(msg), loc(loc)
+		{
+		}
+
+		const lcool::location loc;
+	};
+
+	class lexer
+	{
+	public:
+		lexer(istream& input, shared_ptr<const string>& filename);
+
+		// Scans the next token from the input stream
+		//  Throws parse_error if a lexical error occurs
+		token scan_token();
 
 	private:
 		istream& input;
-		shared_ptr<const string> filename;
+		lcool::location loc;
 	};
 
-	class parser : public parser_base
+	class parser
 	{
 	public:
-		parser(istream& input, const string& filename, lcool::logger& log);
+		parser(istream& input, shared_ptr<const string>& filename, lcool::logger& log);
 		ast::program parse();
 
 	private:
+		// Consume one token unconditionally or of the given type
+		void consume();
+		void consume(token_type type);
+
+		// Optionally consumes one token based on type
+		bool optional(token_type type);
+
+		// Reference to logger
+		lcool::logger& log;
+
+		// Lexer and single lookahead token
+		lexer my_lexer;
+		token lookahead;
 	};
 }
 
 // ########################
-// parser_base
+// lexer
 // ########################
 
-parser_base::parser_base(istream& input, const string& filename, lcool::logger& log)
-	: log(log), input(input), filename(make_shared<const string>(filename))
+lexer::lexer(istream& input, shared_ptr<const string>& filename)
+	: input(input), loc { filename, 1, 1 }
 {
-	// Disable whitespace skipping on input stream
-	input.unsetf(std::ios::skipws);
+}
+
+token lexer::scan_token()
+{
 }
 
 // ########################
 // parser
 // ########################
 
-parser::parser(istream& input, const string& filename, lcool::logger& log)
-	: parser_base(input, filename, log)
+parser::parser(istream& input, shared_ptr<const string>& filename, lcool::logger& log)
+	: log(log), my_lexer(input, filename)
 {
 }
 
@@ -87,13 +132,48 @@ ast::program parser::parse()
 	return ast::program();
 }
 
+void parser::consume()
+{
+	lookahead = my_lexer.scan_token();
+}
+
+void parser::consume(token_type type)
+{
+	if (!optional(type))
+	{
+		// TODO Error recovery?
+		throw parse_error(lookahead.loc, "syntax error");
+	}
+}
+
+bool parser::optional(token_type type)
+{
+	if (lookahead.type == type)
+	{
+		consume();
+		return true;
+	}
+
+	return false;
+}
+
 // ########################
 // External Functions
 // ########################
 
 ast::program lcool::parse(istream& input, const string& filename, lcool::logger& log)
 {
-	return parser(input, filename, log).parse();
+	try
+	{
+		auto filename_shared = make_shared<const string>(filename);
+		return parser(input, filename_shared, log).parse();
+	}
+	catch(parse_error& e)
+	{
+		// Log error and die
+		log.error(e.loc, e.what());
+		return ast::program();
+	}
 }
 
 #include <iostream>
