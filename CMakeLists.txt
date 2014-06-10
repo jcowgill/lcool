@@ -24,10 +24,13 @@ set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 add_executable(lcoolc
 	"${SRC_DIR}/ast.cpp"
 	"${SRC_DIR}/ast.hpp"
+	"${SRC_DIR}/lexer.cpp"
+	"${SRC_DIR}/lexer.hpp"
 	"${SRC_DIR}/logger.cpp"
 	"${SRC_DIR}/logger.hpp"
 	"${SRC_DIR}/parser.cpp"
 	"${SRC_DIR}/parser.hpp"
+	"${SRC_DIR}/smart_ptr.hpp"
 )
 
 # Set options
