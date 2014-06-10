@@ -18,7 +18,8 @@
 #ifndef LCOOL_LOGGER_HPP
 #define LCOOL_LOGGER_HPP
 
-#include <ostream>
+#include <boost/format/format_fwd.hpp>
+#include <iosfwd>
 #include <string>
 
 namespace lcool
@@ -63,6 +64,12 @@ namespace lcool
 
 		/** Prints an error which occured at the given location */
 		virtual void error(const location& loc, const std::string& str) = 0;
+
+		// Boost format versions
+		void warning(const boost::format& format);
+		void warning(const location& loc, const boost::format& format);
+		void error(const boost::format& format);
+		void error(const location& loc, const boost::format& format);
 	};
 
 	/** Implementation of logger which prints to an ostream */
