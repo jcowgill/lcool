@@ -23,12 +23,32 @@
 
 std::string lcool::location::to_string() const
 {
-	return boost::str(boost::format("%1%:%2%:%3%") % filename % line % column);
+	return boost::str(boost::format("%1%:%2%:%3%") % *filename % line % column);
 }
 
 std::ostream& lcool::operator<< (std::ostream& stream, const lcool::location& loc)
 {
 	return stream << loc.to_string();
+}
+
+void lcool::logger::warning(const boost::format& format)
+{
+	warning(format.str());
+}
+
+void lcool::logger::warning(const lcool::location& loc, const boost::format& format)
+{
+	warning(loc, format.str());
+}
+
+void lcool::logger::error(const boost::format& format)
+{
+	error(format.str());
+}
+
+void lcool::logger::error(const lcool::location& loc, const boost::format& format)
+{
+	error(loc, format.str());
 }
 
 lcool::logger_ostream::logger_ostream()
