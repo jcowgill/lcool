@@ -34,23 +34,23 @@ namespace
 	// List of keywords in lowercase
 	const std::map<std::string, token_type> kw_mappings =
 	{
-		{ "case",       TOK_CASE },
-		{ "class",      TOK_CLASS },
-		{ "else",       TOK_ELSE },
-		{ "esac",       TOK_ESAC },
-		{ "fi",         TOK_FI },
-		{ "if",         TOK_IF },
-		{ "in",         TOK_IN },
-		{ "inherits",   TOK_INHERITS },
-		{ "isvoid",     TOK_ISVOID },
-		{ "let",        TOK_LET },
-		{ "loop",       TOK_LOOP },
-		{ "new",        TOK_NEW },
-		{ "not",        TOK_NOT },
-		{ "of",         TOK_OF },
-		{ "pool",       TOK_POOL },
-		{ "then",       TOK_THEN },
-		{ "while",      TOK_WHILE },
+		{ "case",       token_type::kw_case },
+		{ "class",      token_type::kw_class },
+		{ "else",       token_type::kw_else },
+		{ "esac",       token_type::kw_esac },
+		{ "fi",         token_type::kw_fi },
+		{ "if",         token_type::kw_if },
+		{ "in",         token_type::kw_in },
+		{ "inherits",   token_type::kw_inherits },
+		{ "isvoid",     token_type::kw_isvoid },
+		{ "let",        token_type::kw_let },
+		{ "loop",       token_type::kw_loop },
+		{ "new",        token_type::kw_new },
+		{ "not",        token_type::kw_not },
+		{ "of",         token_type::kw_of },
+		{ "pool",       token_type::kw_pool },
+		{ "then",       token_type::kw_then },
+		{ "while",      token_type::kw_while },
 	};
 
 	// Convert string to lowercase
@@ -92,7 +92,7 @@ lcool::token lexer::scan_token()
 	{
 		result = scan_token_all();
 	}
-	while (result.type == TOK_COMMENT);
+	while (result.type == token_type::comment);
 
 	return result;
 }
@@ -113,38 +113,38 @@ lcool::token lexer::scan_token_all()
 	switch (first)
 	{
 	case EOF:
-		result.type = TOK_EOF;
+		result.type = token_type::eof;
 		break;
 
 	// Symbols and comments
-	case ';': result.type = TOK_SEMICOLON; break;
-	case ':': result.type = TOK_COLON;     break;
-	case ',': result.type = TOK_COMMA;     break;
-	case '@': result.type = TOK_AT;        break;
-	case '.': result.type = TOK_DOT;       break;
-	case '{': result.type = TOK_LBRAKET;   break;
-	case '}': result.type = TOK_RBRAKET;   break;
-	case ')': result.type = TOK_RPAREN;    break;
-	case '+': result.type = TOK_PLUS;      break;
-	case '*': result.type = TOK_TIMES;     break;
-	case '/': result.type = TOK_DIVIDE;    break;
-	case '~': result.type = TOK_NEGATE;    break;
+	case ';': result.type = token_type::semicolon; break;
+	case ':': result.type = token_type::colon;     break;
+	case ',': result.type = token_type::comma;     break;
+	case '@': result.type = token_type::at;        break;
+	case '.': result.type = token_type::dot;       break;
+	case '{': result.type = token_type::lbraket;   break;
+	case '}': result.type = token_type::rbraket;   break;
+	case ')': result.type = token_type::rparen;    break;
+	case '+': result.type = token_type::plus;      break;
+	case '*': result.type = token_type::times;     break;
+	case '/': result.type = token_type::divide;    break;
+	case '~': result.type = token_type::negate;    break;
 
 	case '<':
 		// < <- <=
 		if (lookahead == '-')
 		{
 			consume_char(result);
-			result.type = TOK_ASSIGN;
+			result.type = token_type::assign;
 		}
 		else if (lookahead == '=')
 		{
 			consume_char(result);
-			result.type = TOK_LESS_EQUAL;
+			result.type = token_type::less_equal;
 		}
 		else
 		{
-			result.type = TOK_LESS;
+			result.type = token_type::less;
 		}
 
 		break;
@@ -154,11 +154,11 @@ lcool::token lexer::scan_token_all()
 		if (lookahead == '>')
 		{
 			consume_char(result);
-			result.type = TOK_CASE_ARROW;
+			result.type = token_type::case_arrow;
 		}
 		else
 		{
-			result.type = TOK_EQUAL;
+			result.type = token_type::equal;
 		}
 
 		break;
@@ -168,11 +168,11 @@ lcool::token lexer::scan_token_all()
 		if (lookahead == '-')
 		{
 			parse_comment_single();
-			result.type = TOK_COMMENT;
+			result.type = token_type::comment;
 		}
 		else
 		{
-			result.type = TOK_MINUS;
+			result.type = token_type::minus;
 		}
 
 		break;
@@ -182,11 +182,11 @@ lcool::token lexer::scan_token_all()
 		if (lookahead == '*')
 		{
 			parse_comment_multi();
-			result.type = TOK_COMMENT;
+			result.type = token_type::comment;
 		}
 		else
 		{
-			result.type = TOK_LPAREN;
+			result.type = token_type::lparen;
 		}
 
 	// Special tokens
@@ -227,15 +227,15 @@ void lexer::parse_identifier(token& into)
 	}
 	else if (into.value == "true" || into.value == "false")
 	{
-		into.type = TOK_BOOLEAN;
+		into.type = token_type::boolean;
 	}
 	else if (islower(into.value[0]))
 	{
-		into.type = TOK_ID;
+		into.type = token_type::id;
 	}
 	else
 	{
-		into.type = TOK_TYPE;
+		into.type = token_type::type;
 	}
 }
 
@@ -265,7 +265,7 @@ void lexer::parse_string(token& into)
 	}
 	while (c != '"');
 
-	into.type = TOK_STRING;
+	into.type = token_type::string;
 }
 
 void lexer::parse_integer(token& into)
@@ -274,7 +274,7 @@ void lexer::parse_integer(token& into)
 	while (isdigit(lookahead))
 		consume_char(into);
 
-	into.type = TOK_INTEGER;
+	into.type = token_type::integer;
 }
 
 void lexer::parse_comment_single()

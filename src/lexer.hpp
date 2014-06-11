@@ -28,58 +28,58 @@
 namespace lcool
 {
 	/** Types of token */
-	enum token_type
+	enum class token_type
 	{
-		// Special tokens (TOK_COMMENT is discarded internally and never returned)
-		TOK_EOF,
-		TOK_COMMENT,
+		// Special tokens (comment is discarded internally and never returned)
+		eof,
+		comment,
 
 		// Variable tokens (can have differing values)
-		TOK_ID,
-		TOK_TYPE,
-		TOK_INTEGER,
-		TOK_STRING,
-		TOK_BOOLEAN,
+		id,
+		type,
+		integer,
+		string,
+		boolean,
 
 		// Symbols
-		TOK_SEMICOLON,  // ;
-		TOK_COLON,      // :
-		TOK_COMMA,      // ,
-		TOK_AT,         // @
-		TOK_DOT,        // .
-		TOK_LBRAKET,    // {
-		TOK_RBRAKET,    // }
-		TOK_LPAREN,     // (
-		TOK_RPAREN,     // )
-		TOK_PLUS,       // +
-		TOK_MINUS,      // -
-		TOK_TIMES,      // *
-		TOK_DIVIDE,     // /
-		TOK_NEGATE,     // ~
-		TOK_LESS,       // <
-		TOK_LESS_EQUAL, // <=
-		TOK_EQUAL,      // =
-		TOK_ASSIGN,     // <-
-		TOK_CASE_ARROW, // =>
+		semicolon,  // ;
+		colon,      // :
+		comma,      // ,
+		at,         // @
+		dot,        // .
+		lbraket,    // {
+		rbraket,    // }
+		lparen,     // (
+		rparen,     // )
+		plus,       // +
+		minus,      // -
+		times,      // *
+		divide,     // /
+		negate,     // ~
+		less,       // <
+		less_equal, // <=
+		equal,      // =
+		assign,     // <-
+		case_arrow, // =>
 
 		// Keywords
-		TOK_CASE,
-		TOK_CLASS,
-		TOK_ELSE,
-		TOK_ESAC,
-		TOK_FI,
-		TOK_IF,
-		TOK_IN,
-		TOK_INHERITS,
-		TOK_ISVOID,
-		TOK_LET,
-		TOK_LOOP,
-		TOK_NEW,
-		TOK_NOT,
-		TOK_OF,
-		TOK_POOL,
-		TOK_THEN,
-		TOK_WHILE,
+		kw_case,
+		kw_class,
+		kw_else,
+		kw_esac,
+		kw_fi,
+		kw_if,
+		kw_in,
+		kw_inherits,
+		kw_isvoid,
+		kw_let,
+		kw_loop,
+		kw_new,
+		kw_not,
+		kw_of,
+		kw_pool,
+		kw_then,
+		kw_while,
 	};
 
 	/** A token read by the lexer */
