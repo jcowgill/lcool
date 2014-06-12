@@ -72,7 +72,7 @@ namespace
 		unique_ptr<T> make_expr()
 		{
 			auto result = make_unique<T>();
-			result.loc = std::move(lookahead.loc);
+			result->loc = std::move(lookahead.loc);
 			return result;
 		}
 
@@ -261,11 +261,11 @@ unique_ptr<ast::expr> parser::parse_expr_base()
 			auto result = make_expr<ast::conditional>();
 
 			consume(token_type::kw_if);
-			result.predicate = parse_expr();
+			result->predicate = parse_expr();
 			consume(token_type::kw_then);
-			result.if_true   = parse_expr();
+			result->if_true   = parse_expr();
 			consume(token_type::kw_else);
-			result.if_false  = parse_expr();
+			result->if_false  = parse_expr();
 			consume(token_type::kw_fi);
 
 			return std::move(result);
@@ -276,9 +276,9 @@ unique_ptr<ast::expr> parser::parse_expr_base()
 			auto result = make_expr<ast::loop>();
 
 			consume(token_type::kw_while);
-			result.predicate = parse_expr();
+			result->predicate = parse_expr();
 			consume(token_type::kw_loop);
-			result.body      = parse_expr();
+			result->body      = parse_expr();
 			consume(token_type::kw_pool);
 
 			return std::move(result);
@@ -292,7 +292,7 @@ unique_ptr<ast::expr> parser::parse_expr_base()
 
 			do
 			{
-				statements.emplace(parse_expr());
+				result->statements.push_back(parse_expr());
 				consume(token_type::semicolon);
 			}
 			while (!optional(token_type::rbraket));

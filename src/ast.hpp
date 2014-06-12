@@ -323,6 +323,12 @@ namespace lcool { namespace ast
 	class cls
 	{
 	public:
+		// The compiler isn't able to work out that this class
+		//  cannot be copy constructed, so help it out a bit
+		cls()                 = default;
+		cls(cls&&)            = default;
+		cls& operator=(cls&&) = default;
+
 		/** Class location */
 		location loc;
 
