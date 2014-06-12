@@ -52,6 +52,9 @@ namespace lcool { namespace ast
 	class type_and_value
 	{
 	public:
+		/** Location of the attribute / variable declaration */
+		location loc;
+
 		/** Type of variable / attribute */
 		std::string type;
 
