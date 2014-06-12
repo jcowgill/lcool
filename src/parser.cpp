@@ -52,12 +52,9 @@ namespace
 
 	private:
 		// Top-level parsers
-		std::pair<std::string, ast::cls>            parse_class();
-		void parse_feature(ast::cls& into);
-		std::pair<std::string, ast::type_and_value> parse_attribute(token&& name);
-		std::pair<std::string, ast::method>         parse_method(token&& name);
-
-		ast::type_and_value parse_type_and_value();
+		ast::cls       parse_class();
+		ast::attribute parse_attribute(token&& name);
+		ast::method    parse_method(token&& name);
 
 		// Expression parsers
 		unique_ptr<ast::expr> parse_expr();
@@ -69,31 +66,6 @@ namespace
 		unique_ptr<ast::expr> parse_expr_negate();
 		unique_ptr<ast::expr> parse_expr_dispatch();
 		unique_ptr<ast::expr> parse_expr_base();
-
-		// Insert a pair into a map
-		template <typename T>
-		void insert_symbol(
-			std::map<std::string, T>& map, const std::string& map_name,
-			std::pair<std::string, T>&& symbol, lcool::location loc)
-		{
-			// Add to list or error if the class already exists
-			auto result = map.insert(std::move(symbol));
-			if (!result.second)
-			{
-				const std::string& symbol_name = result.first->first;
-				log.error(loc, "duplicate definition for " + map_name + " " + symbol_name);
-			}
-		}
-
-		// Insert a pair into a map
-		//  The type T must have a "loc" location attribute
-		template <typename T>
-		void insert_symbol(
-			std::map<std::string, T>& map, const std::string& map_name,
-			std::pair<std::string, T>&& symbol)
-		{
-			insert_symbol(map, map_name, std::move(symbol), symbol.second.loc);
-		}
 
 		// Construct an expression and moves the location in the lookahead token into it
 		template <typename T>
@@ -138,7 +110,7 @@ ast::program parser::parse()
 	// Consume all the classes
 	while (lookahead.type == token_type::kw_class)
 	{
-		insert_symbol(result, "class", parse_class());
+		result.push_back(parse_class());
 	}
 
 	// Must end with EOF
@@ -146,14 +118,13 @@ ast::program parser::parse()
 	return result;
 }
 
-std::pair<std::string, ast::cls> parser::parse_class()
+ast::cls parser::parse_class()
 {
-	std::string name;
 	ast::cls result;
 
 	// Extract class header
-	result.loc = consume(token_type::kw_class).loc;
-	name       = consume(token_type::type).value;
+	result.loc  = consume(token_type::kw_class).loc;
+	result.name = consume(token_type::type).value;
 	if (optional(token_type::kw_inherits))
 	{
 		result.parent = consume(token_type::type).value;
@@ -169,11 +140,11 @@ std::pair<std::string, ast::cls> parser::parse_class()
 
 		if (lookahead.type == token_type::lparen)
 		{
-			insert_symbol(result.methods, "method", parse_method(std::move(name)));
+			result.methods.push_back(parse_method(std::move(name)));
 		}
 		else
 		{
-			insert_symbol(result.attributes, "attribute", parse_attribute(std::move(name)));
+			result.attributes.push_back(parse_attribute(std::move(name)));
 			consume(token_type::semicolon);
 		}
 	}
@@ -181,31 +152,33 @@ std::pair<std::string, ast::cls> parser::parse_class()
 	consume(token_type::rbraket);
 	consume(token_type::semicolon);
 
-	return std::make_pair(std::move(name), std::move(result));
+	return result;
 }
 
-std::pair<std::string, ast::type_and_value> parser::parse_attribute(token&& name)
+ast::attribute parser::parse_attribute(token&& name)
 {
-	ast::type_and_value result;
+	ast::attribute result;
 
 	consume(token_type::colon);
 
 	// Extract location and type
 	result.loc  = std::move(name.loc);
+	result.name = std::move(name.value);
 	result.type = consume(token_type::type).value;
 
 	// Extract initial value
 	if (optional(token_type::assign))
 		result.initial = parse_expr();
 
-	return std::make_pair(std::move(name.value), std::move(result));
+	return result;
 }
 
-std::pair<std::string, ast::method> parser::parse_method(token&& name)
+ast::method parser::parse_method(token&& name)
 {
 	ast::method result;
 
 	result.loc  = std::move(name.loc);
+	result.name = std::move(name.value);
 	consume(token_type::lparen);
 
 	// Extract parameters
@@ -224,11 +197,8 @@ std::pair<std::string, ast::method> parser::parse_method(token&& name)
 		consume(token_type::colon);
 		token type_token = consume(token_type::type);
 
-		insert_symbol(
-			result.params,
-			"parameter",
-			std::make_pair(std::move(name.value), std::move(type_token.value)),
-			name.loc);
+		result.params.push_back(
+			std::make_pair(std::move(name.value), std::move(type_token.value)));
 	}
 	while (optional(token_type::comma));
 
@@ -241,7 +211,7 @@ std::pair<std::string, ast::method> parser::parse_method(token&& name)
 	result.body = parse_expr();
 	consume(token_type::rbraket);
 
-	return std::make_pair(std::move(name.value), std::move(result));
+	return result;
 }
 
 // ########################

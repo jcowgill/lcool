@@ -19,7 +19,6 @@
 #define LCOOL_AST_HPP
 
 #include <boost/optional/optional.hpp>
-#include <map>
 #include <string>
 #include <vector>
 
@@ -48,12 +47,15 @@ namespace lcool { namespace ast
 		location loc;
 	};
 
-	/** A fixed type and an initial value for a new variable / attribute */
-	class type_and_value
+	/** An attribute declaration (also used for let statements) */
+	class attribute
 	{
 	public:
 		/** Location of the attribute / variable declaration */
 		location loc;
+
+		/** Name of the attribute */
+		std::string name;
 
 		/** Type of variable / attribute */
 		std::string type;
@@ -140,7 +142,7 @@ namespace lcool { namespace ast
 		virtual void accept(expr_visitor& visitor);
 
 		/** List of variables to declare */
-		std::map<std::string, type_and_value> vars;
+		std::vector<attribute> vars;
 
 		/** Let expression body */
 		unique_ptr<expr> body;
@@ -304,11 +306,14 @@ namespace lcool { namespace ast
 		/** Method location */
 		location loc;
 
+		/** Method name */
+		std::string name;
+
 		/** Return type */
 		std::string type;
 
 		/** Method parameters */
-		std::map<std::string, std::string> params;
+		std::vector<std::pair<std::string, std::string>> params;
 
 		/** Method body */
 		unique_ptr<expr> body;
@@ -321,18 +326,21 @@ namespace lcool { namespace ast
 		/** Class location */
 		location loc;
 
+		/** Name of class */
+		std::string name;
+
 		/** Parent of the class (inherits from) */
 		boost::optional<std::string> parent;
 
 		/** Attribute definitions */
-		std::map<std::string, type_and_value> attributes;
+		std::vector<attribute> attributes;
 
 		/** Method definitions */
-		std::map<std::string, method> methods;
+		std::vector<method> methods;
 	};
 
 	/** Collection of classes which make up a program */
-	typedef std::map<std::string, cls> program;
+	typedef std::vector<cls> program;
 }}
 
 #endif
