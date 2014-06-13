@@ -7,4 +7,4 @@ cd "$( dirname "${BASH_SOURCE[0]}" )"
 mkdir -p build
 cd build
 cmake .. -Wdev -DCMAKE_BUILD_TYPE=Debug
-make -j4
+make -j4 "$@"
