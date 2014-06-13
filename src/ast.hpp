@@ -19,6 +19,7 @@
 #define LCOOL_AST_HPP
 
 #include <boost/optional/optional.hpp>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -202,7 +203,7 @@ namespace lcool { namespace ast
 		virtual void accept(expr_visitor& visitor);
 
 		/** Value of the constant */
-		int32_t value = 0;
+		std::int32_t value = 0;
 	};
 
 	/** Constant string */
@@ -225,25 +226,40 @@ namespace lcool { namespace ast
 		std::string id;
 	};
 
+	/** Types of unary operations */
+	enum class compute_unary_type
+	{
+		isvoid,         /**< Tests if the expression is void */
+		negate,         /**< Negates an integer expression */
+		logical_not,    /**< Negates a boolean expression */
+	};
+
 	/** Computes some unary operation */
 	class compute_unary : public expr
 	{
 	public:
 		virtual void accept(expr_visitor& visitor);
 
-		/** Types of unary operations */
-		enum op_type
-		{
-			ISVOID,     /**< Tests if the expression is void */
-			NEGATE,     /**< Negates an integer expression */
-			NOT         /**< Negates a boolean expression */
-		};
-
 		/** Type of expression */
-		op_type op;
+		compute_unary_type op;
 
 		/** Sub expression */
 		unique_ptr<expr> body;
+	};
+
+	/** Types of binary operations */
+	enum compute_binary_type
+	{
+		add,                /**< Adds two integers */
+		subtract,           /**< Subtracts two integers */
+		multiply,           /**< Multiplies two integers */
+		divide,             /**< Divides two integers */
+		less,               /**< Less than comparision */
+		less_or_equal,      /**< Less than or equal comparision */
+		greater,            /**< (extension) Greater than comparision */
+		greater_or_equal,   /**< (extension) Greater than or equal comparision */
+		equal,              /**< Value equality */
+		not_equal,          /**< (extension) Value inequality */
 	};
 
 	/** Computes some binary operation */
@@ -252,23 +268,8 @@ namespace lcool { namespace ast
 	public:
 		virtual void accept(expr_visitor& visitor);
 
-		/** Types of unary operations */
-		enum op_type
-		{
-			ADD,                /**< Adds two integers */
-			SUBTRACT,           /**< Subtracts two integers */
-			MULTIPLY,           /**< Multiplies two integers */
-			DIVIDE,             /**< Divides two integers */
-			LESS,               /**< Less than comparision */
-			LESS_OR_EQUAL,      /**< Less than or equal comparision */
-			GREATER,            /**< (extension) Greater than comparision */
-			GREATER_OR_EQUAL,   /**< (extension) Greater than or equal comparision */
-			EQUAL,              /**< Value equality */
-			NOT_EQUAL           /**< (extension) Value inequality */
-		};
-
 		/** Type of expression */
-		op_type op;
+		compute_binary_type op;
 
 		/** Left sub expression */
 		unique_ptr<expr> left;

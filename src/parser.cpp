@@ -53,19 +53,24 @@ namespace
 	private:
 		// Top-level parsers
 		ast::cls       parse_class();
-		ast::attribute parse_attribute(token&& name);
-		ast::method    parse_method(token&& name);
+		ast::attribute parse_attribute();
+		ast::method    parse_method();
 
 		// Expression parsers
 		unique_ptr<ast::expr> parse_expr();
 		unique_ptr<ast::expr> parse_expr_not();
 		unique_ptr<ast::expr> parse_expr_comp();
-		unique_ptr<ast::expr> parse_expr_and();
+		unique_ptr<ast::expr> parse_expr_add();
 		unique_ptr<ast::expr> parse_expr_mult();
 		unique_ptr<ast::expr> parse_expr_isvoid();
 		unique_ptr<ast::expr> parse_expr_negate();
 		unique_ptr<ast::expr> parse_expr_dispatch();
 		unique_ptr<ast::expr> parse_expr_base();
+
+		// Literal parsers
+		unique_ptr<ast::expr> parse_boolean();
+		unique_ptr<ast::expr> parse_integer();
+		unique_ptr<ast::expr> parse_string();
 
 		// Construct an expression and moves the location in the lookahead token into it
 		template <typename T>
@@ -75,6 +80,13 @@ namespace
 			result->loc = std::move(lookahead.loc);
 			return result;
 		}
+
+		// Parse an infix expression
+		unique_ptr<ast::expr> parse_infix(
+			unique_ptr<ast::expr> (parser::*next_level)(),
+			token_type token1, ast::compute_binary_type type1,
+			token_type token2, ast::compute_binary_type type2,
+			token_type token3, ast::compute_binary_type type3);
 
 		// Consume one token unconditionally or of the given type
 		token consume();
@@ -86,9 +98,9 @@ namespace
 		// Reference to logger
 		lcool::logger& log;
 
-		// Lexer and single lookahead token
+		// Lexer and two lookahead tokens
 		lexer my_lexer;
-		token lookahead;
+		token lookahead, lookahead2;
 	};
 }
 
@@ -99,7 +111,8 @@ namespace
 parser::parser(std::istream& input, shared_ptr<const std::string>& filename, lcool::logger& log)
 	: log(log), my_lexer(input, filename)
 {
-	// Get first token
+	// Get first 2 tokens
+	consume();
 	consume();
 }
 
@@ -135,16 +148,13 @@ ast::cls parser::parse_class()
 
 	while (lookahead.type == token_type::id)
 	{
-		// Extract name and branch based on next symbol (aaarg 2 tokens of lookahead!!)
-		token name = consume(token_type::id);
-
-		if (lookahead.type == token_type::lparen)
+		if (lookahead2.type == token_type::lparen)
 		{
-			result.methods.push_back(parse_method(std::move(name)));
+			result.methods.push_back(parse_method());
 		}
 		else
 		{
-			result.attributes.push_back(parse_attribute(std::move(name)));
+			result.attributes.push_back(parse_attribute());
 			consume(token_type::semicolon);
 		}
 	}
@@ -155,10 +165,11 @@ ast::cls parser::parse_class()
 	return result;
 }
 
-ast::attribute parser::parse_attribute(token&& name)
+ast::attribute parser::parse_attribute()
 {
 	ast::attribute result;
 
+	token name = consume(token_type::id);
 	consume(token_type::colon);
 
 	// Extract location and type
@@ -173,9 +184,11 @@ ast::attribute parser::parse_attribute(token&& name)
 	return result;
 }
 
-ast::method parser::parse_method(token&& name)
+ast::method parser::parse_method()
 {
 	ast::method result;
+
+	token name = consume(token_type::id);
 
 	result.loc  = std::move(name.loc);
 	result.name = std::move(name.value);
@@ -188,7 +201,7 @@ ast::method parser::parse_method(token&& name)
 		if (result.params.empty())
 		{
 			// Permit no arguments
-			if (lookahead.type != token_type::id)
+			if (lookahead.type == token_type::rparen)
 				break;
 		}
 
@@ -218,38 +231,193 @@ ast::method parser::parse_method(token&& name)
 // Expression Parsers
 // ########################
 
-
-/*
-+			// Expressions
-+			// TODO and, or, >, >= operators??
-+			expr = *(term_id >> "<-") >> not_expr;
-+
-+			not_expr = *lit("not") >> comp_expr;
-+
-+			comp_expr = add_expr
-+			    >> *("<=" >> add_expr |
-+			          "<" >> add_expr |
-+			          "=" >> add_expr);
-+
-+			add_expr = mult_expr
-+			    >> *('+' >> mult_expr |
-+			         '-' >> mult_expr);
-+
-+			mult_expr = isvoid_expr
-+			    >> *('*' >> isvoid_expr |
-+			         '/' >> isvoid_expr);
-+
-+			isvoid_expr = *lit("isvoid") >> negate_expr;
-+
-+			negate_expr = *lit('~') >> dispatch_expr;
-+
-+			dispatch_expr = base_expr
-+			    >> *(-('@' >> term_type) >> '.' >> term_id >> '(' >> -(expr % ',') >> ')');
-*/
-
 unique_ptr<ast::expr> parser::parse_expr()
 {
-	return make_unique<ast::block>();
+	// Detect assignment
+	if (lookahead.type == token_type::id && lookahead2.type == token_type::assign)
+	{
+		auto result = make_expr<ast::assign>();
+
+		result->id    = consume(token_type::id).value;
+		consume(token_type::assign);
+		result->value = parse_expr();
+
+		return std::move(result);
+	}
+
+	return parse_expr_not();
+}
+
+unique_ptr<ast::expr> parser::parse_expr_not()
+{
+	// Detect not
+	if (lookahead.type == token_type::kw_not)
+	{
+		auto result = make_expr<ast::compute_unary>();
+
+		consume(token_type::kw_not);
+		result->op   = ast::compute_unary_type::logical_not;
+		result->body = parse_expr_not();
+
+		return std::move(result);
+	}
+
+	return parse_expr_comp();
+}
+
+unique_ptr<ast::expr> parser::parse_expr_comp()
+{
+	auto left = parse_expr_add();
+
+	while (lookahead.type == token_type::less_equal ||
+	       lookahead.type == token_type::less ||
+	       lookahead.type == token_type::equal)
+	{
+		auto new_left = make_expr<ast::compute_binary>();
+
+		// Set token type
+		switch (consume().type)
+		{
+			case token_type::less_equal: new_left->op = ast::compute_binary_type::less_or_equal;
+			case token_type::less:       new_left->op = ast::compute_binary_type::less;
+			case token_type::equal:      new_left->op = ast::compute_binary_type::equal;
+		}
+
+		// Move expressions
+		new_left->left  = std::move(left);
+		new_left->right = parse_expr_add();
+		left            = std::move(new_left);
+	}
+
+	return left;
+}
+
+unique_ptr<ast::expr> parser::parse_expr_add()
+{
+	auto left = parse_expr_mult();
+
+	while (lookahead.type == token_type::plus ||
+	       lookahead.type == token_type::minus)
+	{
+		auto new_left = make_expr<ast::compute_binary>();
+
+		// Set token type
+		switch (consume().type)
+		{
+			case token_type::plus:  new_left->op = ast::compute_binary_type::add;
+			case token_type::minus: new_left->op = ast::compute_binary_type::subtract;
+		}
+
+		// Move expressions
+		new_left->left  = std::move(left);
+		new_left->right = parse_expr_mult();
+		left            = std::move(new_left);
+	}
+
+	return left;
+}
+
+unique_ptr<ast::expr> parser::parse_expr_mult()
+{
+	auto left = parse_expr_isvoid();
+
+	while (lookahead.type == token_type::times ||
+	       lookahead.type == token_type::divide)
+	{
+		auto new_left = make_expr<ast::compute_binary>();
+
+		// Set token type
+		switch (consume().type)
+		{
+			case token_type::times:  new_left->op = ast::compute_binary_type::multiply;
+			case token_type::divide: new_left->op = ast::compute_binary_type::divide;
+		}
+
+		// Move expressions
+		new_left->left  = std::move(left);
+		new_left->right = parse_expr_isvoid();
+		left            = std::move(new_left);
+	}
+
+	return left;
+}
+
+unique_ptr<ast::expr> parser::parse_expr_isvoid()
+{
+	// Detect isvoid
+	if (lookahead.type == token_type::kw_isvoid)
+	{
+		auto result = make_expr<ast::compute_unary>();
+
+		consume(token_type::kw_isvoid);
+		result->op   = ast::compute_unary_type::isvoid;
+		result->body = parse_expr_isvoid();
+
+		return std::move(result);
+	}
+
+	return parse_expr_negate();
+}
+
+unique_ptr<ast::expr> parser::parse_expr_negate()
+{
+	// Detect negate
+	if (lookahead.type == token_type::negate)
+	{
+		auto result = make_expr<ast::compute_unary>();
+
+		consume(token_type::negate);
+		result->op   = ast::compute_unary_type::negate;
+		result->body = parse_expr_negate();
+
+		return std::move(result);
+	}
+
+	return parse_expr_dispatch();
+}
+
+unique_ptr<ast::expr> parser::parse_expr_dispatch()
+{
+	auto left = parse_expr_base();
+
+	while (lookahead.type == token_type::at ||
+	       lookahead.type == token_type::dot)
+	{
+		auto new_left = make_expr<ast::dispatch>();
+
+		// Extract object type
+		if (optional(token_type::at))
+			new_left->object_type = consume(token_type::type).value;
+
+		consume(token_type::dot);
+
+		// Extract method name and arguments
+		new_left->method_name = consume(token_type::id).value;
+		consume(token_type::lparen);
+
+		do
+		{
+			// Handle first argument
+			if (new_left->arguments.empty())
+			{
+				// Permit no arguments
+				if (lookahead.type == token_type::rparen)
+					break;
+			}
+
+			// Append argument
+			new_left->arguments.push_back(parse_expr());
+		}
+		while (optional(token_type::comma));
+
+		consume(token_type::rparen);
+
+		// Finish method call
+		new_left->object = std::move(left);
+		left             = std::move(new_left);
+	}
+
+	return left;
 }
 
 unique_ptr<ast::expr> parser::parse_expr_base()
@@ -301,33 +469,156 @@ unique_ptr<ast::expr> parser::parse_expr_base()
 		}
 
 	case token_type::kw_let:
+		{
+			auto result = make_expr<ast::let>();
+
+			consume(token_type::kw_let);
+
+			do
+			{
+				result->vars.push_back(parse_attribute());
+			}
+			while (optional(token_type::comma));
+
+			consume(token_type::kw_in);
+			result->body = parse_expr();
+
+			return std::move(result);
+		}
+
 	case token_type::kw_case:
+		{
+			auto result = make_expr<ast::type_case>();
+
+			consume(token_type::kw_case);
+			result->value = parse_expr();
+			consume(token_type::kw_of);
+
+			do
+			{
+				ast::type_case_branch branch;
+
+				branch.id = consume(token_type::id).value;
+				consume(token_type::colon);
+				branch.type = consume(token_type::type).value;
+				consume(token_type::case_arrow);
+				branch.body = parse_expr();
+				consume(token_type::semicolon);
+
+				result->branches.push_back(std::move(branch));
+			}
+			while (!optional(token_type::kw_esac));
+
+			return std::move(result);
+		}
+
 	case token_type::kw_new:
+		{
+			auto result = make_expr<ast::new_object>();
+
+			consume(token_type::kw_new);
+			result->type = consume(token_type::type).value;
+
+			return std::move(result);
+		}
+
 	case token_type::id:
+		{
+#warning Do we need to do dispatch here??
+			auto result = make_expr<ast::identifier>();
+			result->id = consume(token_type::id).value;
+			return std::move(result);
+		}
+
 	case token_type::integer:
+		return parse_integer();
+
 	case token_type::string:
+		return parse_string();
+
 	case token_type::boolean:
+		return parse_boolean();
+
 	case token_type::lparen:
+		{
+			consume(token_type::lparen);
+			auto result = parse_expr();
+			consume(token_type::rparen);
+			return result;
+		}
+
 	default:
 		// TODO Better messages?
 		throw parse_error(lookahead.loc, "syntax error");
 	}
-/*
-+			base_expr = "if" >> expr >> "then" >> expr >> "else" >> expr >> "fi"
-+			          | "while" >> expr >> "loop" >> expr >> "pool"
-+			          | '{' >> +(expr >> ';') >> '}'
-+			          | "let" >> (attribute % ',') >> "in" >> expr
-+			          | "case" >> expr >> "of" >> +(term_id >> ':' >> term_type >> "=>" >> expr >> ';') >> "esac"
-+			          | "new" >> term_type
-+			          | term_id >> '(' >> -(expr % ',') >> ')'
-+			          | term_id
-+			          | term_int
-+			          | term_str
-+			          | term_bool
-+			          | '(' >> expr >> ')';
-*/
+}
 
-	return make_unique<ast::block>();
+unique_ptr<ast::expr> parser::parse_boolean()
+{
+	auto result = make_expr<ast::constant_bool>();
+	result->value = (consume(token_type::boolean).value == "true");
+	return std::move(result);
+}
+
+unique_ptr<ast::expr> parser::parse_integer()
+{
+	auto result = make_expr<ast::constant_int>();
+	std::string str_value = consume(token_type::integer).value;
+	std::uint32_t int_value = 0;
+
+	// Convert string to integer
+	for (char c : str_value)
+	{
+		// Shift and add to number
+		int_value = (int_value << 1) + (c - '0');
+
+		// Check for overflow
+		if (int_value & (1 << 31))
+		{
+			log.warning(result->loc, "number cannot be represented: " + str_value);
+			break;
+		}
+	}
+
+	result->value = int_value;
+	return std::move(result);
+}
+
+unique_ptr<ast::expr> parser::parse_string()
+{
+	auto result = make_expr<ast::constant_string>();
+	std::string raw_value = consume(token_type::integer).value;
+	bool escaped = false;
+
+	for (char c : raw_value)
+	{
+		if (escaped)
+		{
+			// Escaped characters are copied verbatim except for some special ones
+			switch (c)
+			{
+				case 'b': c = '\b'; break;
+				case 'f': c = '\f'; break;
+				case 'n': c = '\n'; break;
+				case 'r': c = '\r'; break;
+				case 't': c = '\t'; break;
+			}
+
+			result->value += c;
+			escaped = false;
+		}
+		else if (c == '\\')
+		{
+			escaped = true;
+		}
+		else if (c != '"')
+		{
+			// Ignore unescaped quotes (start or end of string)
+			result->value += c;
+		}
+	}
+
+	return std::move(result);
 }
 
 // ########################
@@ -337,7 +628,8 @@ unique_ptr<ast::expr> parser::parse_expr_base()
 token parser::consume()
 {
 	token result = std::move(lookahead);
-	lookahead = my_lexer.scan_token();
+	lookahead = std::move(lookahead2);
+	lookahead2 = my_lexer.scan_token();
 	return result;
 }
 
