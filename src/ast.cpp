@@ -32,3 +32,4 @@ void ast::constant_int   ::accept(ast::expr_visitor& visitor) { visitor.visit(*t
 void ast::constant_string::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
 void ast::identifier     ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
 void ast::compute_unary  ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
+void ast::compute_binary ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
