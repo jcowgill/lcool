@@ -15,33 +15,21 @@
  * along with LCool.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LCOOL_PARSER_HPP
-#define LCOOL_PARSER_HPP
-
-#include <iosfwd>
+#include <iostream>
 
 #include "ast.hpp"
 #include "logger.hpp"
+#include "parser.hpp"
 
-namespace lcool
+int main()
 {
-	/**
-	 * Parses the given input file into the output program
-	 *
-	 * @param input    the input stream containing the file data
-	 * @param filename the name of the file being parsed
-	 * @param log      the logger to print any errors / warnings to
-	 * @return the list of parsed classes
-	 */
-	ast::program parse(std::istream& input, const std::string& filename, logger& log);
+	// Parse and dump to stdout
+	lcool::logger_ostream log;
+	lcool::ast::program program = lcool::parse(std::cin, "stdin", log);
 
-	/**
-	 * Prints a human readable representation of the AST to an output file
-	 *
-	 * @param output  file to print to
-	 * @param program program to dump
-	 */
-	void dump_ast(std::ostream& output, const ast::program& program);
+	if (log.has_errors())
+		return 1;
+
+	lcool::dump_ast(std::cout, program);
+	return 0;
 }
-
-#endif

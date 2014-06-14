@@ -469,6 +469,7 @@ unique_ptr<ast::expr> parser::parse_expr_base()
 		}
 
 	case token_type::kw_let:
+#warning Does this need to have low precedence instead??
 		{
 			auto result = make_expr<ast::let>();
 
@@ -672,13 +673,4 @@ ast::program lcool::parse(std::istream& input, const std::string& filename, lcoo
 		log.error(e.loc, e.what());
 		return ast::program();
 	}
-}
-
-#include <iostream>
-
-int main(void)
-{
-	lcool::logger_ostream log;
-	lcool::parse(std::cin, "", log);
-	return 0;
 }
