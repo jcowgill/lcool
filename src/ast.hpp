@@ -42,7 +42,7 @@ namespace lcool { namespace ast
 		 * This method implements the visitor pattern / double dispatch for expressions.
 		 * @param visitor class containing methods to call
 		 */
-		virtual void accept(expr_visitor& visitor) = 0;
+		virtual void accept(expr_visitor& visitor) const = 0;
 
 		/** The location of the start of this expression */
 		location loc;
@@ -69,7 +69,7 @@ namespace lcool { namespace ast
 	class assign : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Identifier to assign to */
 		std::string id;
@@ -82,7 +82,7 @@ namespace lcool { namespace ast
 	class dispatch : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Name of method to call */
 		std::string method_name;
@@ -101,7 +101,7 @@ namespace lcool { namespace ast
 	class conditional : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Predicate to test on */
 		unique_ptr<expr> predicate;
@@ -117,7 +117,7 @@ namespace lcool { namespace ast
 	class loop : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Predicate to test on */
 		unique_ptr<expr> predicate;
@@ -130,7 +130,7 @@ namespace lcool { namespace ast
 	class block : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** List of statements, last statement is the value of the block */
 		std::vector<unique_ptr<expr>> statements;
@@ -140,7 +140,7 @@ namespace lcool { namespace ast
 	class let : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** List of variables to declare */
 		std::vector<attribute> vars;
@@ -167,7 +167,7 @@ namespace lcool { namespace ast
 	class type_case : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Value to test type of */
 		unique_ptr<expr> value;
@@ -180,7 +180,7 @@ namespace lcool { namespace ast
 	class new_object : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Type of the new object */
 		std::string type;
@@ -190,7 +190,7 @@ namespace lcool { namespace ast
 	class constant_bool : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Value of the constant */
 		bool value = false;
@@ -200,7 +200,7 @@ namespace lcool { namespace ast
 	class constant_int : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Value of the constant */
 		std::int32_t value = 0;
@@ -210,7 +210,7 @@ namespace lcool { namespace ast
 	class constant_string : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Value of the constant (processed to remove escape codes) */
 		std::string value;
@@ -220,7 +220,7 @@ namespace lcool { namespace ast
 	class identifier : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Identifier to read */
 		std::string id;
@@ -238,7 +238,7 @@ namespace lcool { namespace ast
 	class compute_unary : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Type of expression */
 		compute_unary_type op;
@@ -256,17 +256,14 @@ namespace lcool { namespace ast
 		divide,             /**< Divides two integers */
 		less,               /**< Less than comparision */
 		less_or_equal,      /**< Less than or equal comparision */
-		greater,            /**< (extension) Greater than comparision */
-		greater_or_equal,   /**< (extension) Greater than or equal comparision */
 		equal,              /**< Value equality */
-		not_equal,          /**< (extension) Value inequality */
 	};
 
 	/** Computes some binary operation */
 	class compute_binary : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Type of expression */
 		compute_binary_type op;
@@ -284,20 +281,20 @@ namespace lcool { namespace ast
 	public:
 		virtual ~expr_visitor() { }
 
-		virtual void visit(assign& e) = 0;
-		virtual void visit(dispatch& e) = 0;
-		virtual void visit(conditional& e) = 0;
-		virtual void visit(loop& e) = 0;
-		virtual void visit(block& e) = 0;
-		virtual void visit(let& e) = 0;
-		virtual void visit(type_case& e) = 0;
-		virtual void visit(new_object& e) = 0;
-		virtual void visit(constant_bool& e) = 0;
-		virtual void visit(constant_int& e) = 0;
-		virtual void visit(constant_string& e) = 0;
-		virtual void visit(identifier& e) = 0;
-		virtual void visit(compute_unary& e) = 0;
-		virtual void visit(compute_binary& e) = 0;
+		virtual void visit(const assign&) = 0;
+		virtual void visit(const dispatch&) = 0;
+		virtual void visit(const conditional&) = 0;
+		virtual void visit(const loop&) = 0;
+		virtual void visit(const block&) = 0;
+		virtual void visit(const let&) = 0;
+		virtual void visit(const type_case&) = 0;
+		virtual void visit(const new_object&) = 0;
+		virtual void visit(const constant_bool&) = 0;
+		virtual void visit(const constant_int&) = 0;
+		virtual void visit(const constant_string&) = 0;
+		virtual void visit(const identifier&) = 0;
+		virtual void visit(const compute_unary&) = 0;
+		virtual void visit(const compute_binary&) = 0;
 	};
 
 	/** AST for cool methods */
