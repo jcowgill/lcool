@@ -156,8 +156,9 @@ ast::cls parser::parse_class()
 		else
 		{
 			result.attributes.push_back(parse_attribute());
-			consume(token_type::semicolon);
 		}
+
+		consume(token_type::semicolon);
 	}
 
 	consume(token_type::rbraket);
@@ -212,7 +213,7 @@ ast::method parser::parse_method()
 		token type_token = consume(token_type::type);
 
 		result.params.push_back(
-			std::make_pair(std::move(name.value), std::move(type_token.value)));
+			std::make_pair(std::move(name_token.value), std::move(type_token.value)));
 	}
 	while (optional(token_type::comma));
 
@@ -243,9 +244,9 @@ unique_ptr<ast::expr> parser::parse_expr()
 
 		switch (lookahead.type)
 		{
-			case token_type::less_equal: op_type = ast::compute_binary_type::less_or_equal;
-			case token_type::less:       op_type = ast::compute_binary_type::less;
-			case token_type::equal:      op_type = ast::compute_binary_type::equal;
+			case token_type::less_equal: op_type = ast::compute_binary_type::less_or_equal; break;
+			case token_type::less:       op_type = ast::compute_binary_type::less; break;
+			case token_type::equal:      op_type = ast::compute_binary_type::equal; break;
 			default:
 				return left;
 		}
@@ -271,8 +272,8 @@ unique_ptr<ast::expr> parser::parse_expr_add()
 
 		switch (lookahead.type)
 		{
-			case token_type::plus:  op_type = ast::compute_binary_type::add;
-			case token_type::minus: op_type = ast::compute_binary_type::subtract;
+			case token_type::plus:  op_type = ast::compute_binary_type::add; break;
+			case token_type::minus: op_type = ast::compute_binary_type::subtract; break;
 			default:
 				return left;
 		}
@@ -298,8 +299,8 @@ unique_ptr<ast::expr> parser::parse_expr_mult()
 
 		switch (lookahead.type)
 		{
-			case token_type::times:  op_type = ast::compute_binary_type::multiply;
-			case token_type::divide: op_type = ast::compute_binary_type::divide;
+			case token_type::times:  op_type = ast::compute_binary_type::multiply; break;
+			case token_type::divide: op_type = ast::compute_binary_type::divide; break;
 			default:
 				return left;
 		}
@@ -378,9 +379,9 @@ unique_ptr<ast::expr> parser::parse_expr_base()
 		case token_type::kw_if:    return parse_expr_if();
 		case token_type::kw_while: return parse_expr_while();
 		case token_type::lbraket:  return parse_expr_block();
-		case token_type::kw_case:  return parse_expr_if();
-		case token_type::kw_new:   return parse_expr_if();
-		case token_type::id:       return parse_expr_if();
+		case token_type::kw_case:  return parse_expr_case();
+		case token_type::kw_new:   return parse_expr_new();
+		case token_type::id:       return parse_expr_identifier();
 
 		case token_type::integer:  return parse_integer();
 		case token_type::string:   return parse_string();
@@ -596,7 +597,7 @@ unique_ptr<ast::expr> parser::parse_integer()
 unique_ptr<ast::expr> parser::parse_string()
 {
 	auto result = make_expr<ast::constant_string>();
-	std::string raw_value = consume(token_type::integer).value;
+	std::string raw_value = consume(token_type::string).value;
 	bool escaped = false;
 
 	for (char c : raw_value)

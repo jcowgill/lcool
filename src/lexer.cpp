@@ -15,10 +15,8 @@
  * along with LCool.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <algorithm>
 #include <boost/format.hpp>
 #include <cctype>
-#include <cstdio>
 #include <istream>
 #include <map>
 #include <string>
@@ -27,10 +25,11 @@
 #include "logger.hpp"
 #include "smart_ptr.hpp"
 
+using lcool::lexer;
+using lcool::token_type;
+
 namespace
 {
-	using namespace lcool;
-
 	// List of keywords in lowercase
 	const std::map<std::string, token_type> kw_mappings =
 	{
@@ -188,6 +187,8 @@ lcool::token lexer::scan_token_all()
 		{
 			result.type = token_type::lparen;
 		}
+
+		break;
 
 	// Special tokens
 	case '"':

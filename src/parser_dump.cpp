@@ -82,7 +82,8 @@ void ast_dumper::dump(const ast::program& program)
 	{
 		// Dump class
 		print_indent() << "class '" << cls.name << "' (" << cls.loc << ")\n";
-		print_indent() << " inherits '" << cls.parent << "'\n";
+		if (cls.parent)
+			print_indent() << " inherits '" << *cls.parent << "'\n";
 
 		// Dump attributes
 		for (const ast::attribute& attribute : cls.attributes)
@@ -110,20 +111,20 @@ void ast_dumper::dump(const ast::attribute& attribute)
 
 void ast_dumper::dump(const ast::method& method)
 {
-	print_indent() << " method '" << method.name << "' (" << method.loc << ")\n";
-	print_indent() << "  returns '" << method.type << "'\n";
+	print_indent() << "method '" << method.name << "' (" << method.loc << ")\n";
+	print_indent() << " returns '" << method.type << "'\n";
 
 	if (method.params.empty())
 	{
-		print_indent() << "  no params\n";
+		print_indent() << " no params\n";
 	}
 	else
 	{
-		print_indent() << "  params\n";
+		print_indent() << " params\n";
 
 		for (const std::pair<std::string, std::string>& param : method.params)
 		{
-			print_indent() << "   '" << param.first << "' of type '" << param.second << "'\n";
+			print_indent() << "  '" << param.first << "' of type '" << param.second << "'\n";
 		}
 	}
 
@@ -137,22 +138,26 @@ void ast_dumper::dump(const ast::expr& expr)
 
 void ast_dumper::visit(const ast::assign& e)
 {
-	print_indent() << "assign to '" << e.id << "' (" << e.loc << ")\n'";
+	print_indent() << "assign to '" << e.id << "' (" << e.loc << ")\n";
 	dump_indented(*e.value);
 }
 
 void ast_dumper::visit(const ast::dispatch& e)
 {
-	print_indent() << "dispatch to method '" << e.method_name << "' (" << e.loc << ")\n'";
+	print_indent() << "dispatch to method '" << e.method_name << "' (" << e.loc << ")\n";
 
-	print_indent() << " on\n";
 	if (e.object)
-		print_indent() << "  self\n";
-	else
+	{
+		print_indent() << " on\n";
 		dump_indented(*e.object, 2);
+	}
+	else
+	{
+		print_indent() << " on self\n";
+	}
 
 	if (e.object_type)
-		print_indent() << " via type '" << e.object_type << "'\n";
+		print_indent() << " via type '" << *e.object_type << "'\n";
 
 	if (e.arguments.empty())
 	{
