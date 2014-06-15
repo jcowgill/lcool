@@ -11,9 +11,7 @@ set(LCOOL_VERSION_MINOR 1)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
 # Enable GCC flags
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_COMPILER_IS_GNUCXX)
-	list(APPEND CMAKE_CXX_FLAGS "--std=c++11 -Wall -Wextra -pedantic")
-endif()
+list(APPEND CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra -pedantic")
 
 # Find LLVM and Boost
 find_package(Boost REQUIRED COMPONENTS)
