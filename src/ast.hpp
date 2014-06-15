@@ -19,12 +19,12 @@
 #define LCOOL_AST_HPP
 
 #include <boost/optional/optional.hpp>
-#include <map>
-#include <memory>
+#include <cstdint>
 #include <string>
 #include <vector>
 
 #include "logger.hpp"
+#include "smart_ptr.hpp"
 
 namespace lcool { namespace ast
 {
@@ -42,118 +42,111 @@ namespace lcool { namespace ast
 		 * This method implements the visitor pattern / double dispatch for expressions.
 		 * @param visitor class containing methods to call
 		 */
-		virtual void accept(expr_visitor& visitor) = 0;
+		virtual void accept(expr_visitor& visitor) const = 0;
 
 		/** The location of the start of this expression */
 		location loc;
-
-	protected:
-		/** Construct an expression with its location */
-		explicit expr(const location& loc)
-			: loc(loc)
-		{
-		}
 	};
 
-	/** A fixed type and an initial value for a new variable / attribute */
-	class type_and_value
+	/** An attribute declaration (also used for let statements) */
+	class attribute
 	{
 	public:
+		/** Location of the attribute / variable declaration */
+		location loc;
+
+		/** Name of the attribute */
+		std::string name;
+
 		/** Type of variable / attribute */
 		std::string type;
 
 		/** Optional initial value */
-		std::unique_ptr<expr> initial;
+		unique_ptr<expr> initial;
 	};
 
 	/** Expression assigning a value to an identifier */
 	class assign : public expr
 	{
 	public:
-		assign(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Identifier to assign to */
 		std::string id;
 
 		/** Value to assign */
-		std::unique_ptr<expr> value;
+		unique_ptr<expr> value;
 	};
 
 	/** Method dispatch / call expression */
 	class dispatch : public expr
 	{
 	public:
-		dispatch(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Name of method to call */
 		std::string method_name;
 
 		/** Optional object to call method on (or self) */
-		std::unique_ptr<expr> object;
+		unique_ptr<expr> object;
 
 		/** Static type of the object being called */
 		boost::optional<std::string> object_type;
 
 		/** List of arguments */
-		std::vector<std::unique_ptr<expr>> arguments;
+		std::vector<unique_ptr<expr>> arguments;
 	};
 
 	/** Condition expression (if statement) */
 	class conditional : public expr
 	{
 	public:
-		conditional(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Predicate to test on */
-		std::unique_ptr<expr> predicate;
+		unique_ptr<expr> predicate;
 
 		/** Value to return if predicate is true */
-		std::unique_ptr<expr> if_true;
+		unique_ptr<expr> if_true;
 
 		/** Value to return if predicate is false */
-		std::unique_ptr<expr> if_false;
+		unique_ptr<expr> if_false;
 	};
 
 	/** While loop */
 	class loop : public expr
 	{
 	public:
-		loop(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Predicate to test on */
-		std::unique_ptr<expr> predicate;
+		unique_ptr<expr> predicate;
 
 		/** Body of the loop */
-		std::unique_ptr<expr> body;
+		unique_ptr<expr> body;
 	};
 
 	/** Statement block */
 	class block : public expr
 	{
 	public:
-		block(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** List of statements, last statement is the value of the block */
-		std::vector<std::unique_ptr<expr>> statements;
+		std::vector<unique_ptr<expr>> statements;
 	};
 
 	/** Let expression (declares local variables + scope) */
 	class let : public expr
 	{
 	public:
-		let(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** List of variables to declare */
-		std::map<std::string, type_and_value> vars;
+		std::vector<attribute> vars;
 
 		/** Let expression body */
-		std::unique_ptr<expr> body;
+		unique_ptr<expr> body;
 	};
 
 	/** An individual branch of a type case expression */
@@ -167,18 +160,17 @@ namespace lcool { namespace ast
 		std::string type;
 
 		/** Body of the branch */
-		std::unique_ptr<expr> body;
+		unique_ptr<expr> body;
 	};
 
 	/** Type case expression (boo hiss) */
 	class type_case : public expr
 	{
 	public:
-		type_case(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Value to test type of */
-		std::unique_ptr<expr> value;
+		unique_ptr<expr> value;
 
 		/** List of case branches */
 		std::vector<type_case_branch> branches;
@@ -188,8 +180,7 @@ namespace lcool { namespace ast
 	class new_object : public expr
 	{
 	public:
-		new_object(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Type of the new object */
 		std::string type;
@@ -199,8 +190,7 @@ namespace lcool { namespace ast
 	class constant_bool : public expr
 	{
 	public:
-		constant_bool(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Value of the constant */
 		bool value = false;
@@ -210,19 +200,17 @@ namespace lcool { namespace ast
 	class constant_int : public expr
 	{
 	public:
-		constant_int(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Value of the constant */
-		int32_t value = 0;
+		std::int32_t value = 0;
 	};
 
 	/** Constant string */
 	class constant_string : public expr
 	{
 	public:
-		constant_string(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Value of the constant (processed to remove escape codes) */
 		std::string value;
@@ -232,65 +220,59 @@ namespace lcool { namespace ast
 	class identifier : public expr
 	{
 	public:
-		identifier(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Identifier to read */
 		std::string id;
+	};
+
+	/** Types of unary operations */
+	enum class compute_unary_type
+	{
+		isvoid,         /**< Tests if the expression is void */
+		negate,         /**< Negates an integer expression */
+		logical_not,    /**< Negates a boolean expression */
 	};
 
 	/** Computes some unary operation */
 	class compute_unary : public expr
 	{
 	public:
-		compute_unary(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
-
-		/** Types of unary operations */
-		enum op_type
-		{
-			ISVOID,     /**< Tests if the expression is void */
-			NEGATE,     /**< Negates an integer expression */
-			NOT         /**< Negates a boolean expression */
-		};
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Type of expression */
-		op_type op;
+		compute_unary_type op;
 
 		/** Sub expression */
-		std::unique_ptr<expr> body;
+		unique_ptr<expr> body;
+	};
+
+	/** Types of binary operations */
+	enum compute_binary_type
+	{
+		add,                /**< Adds two integers */
+		subtract,           /**< Subtracts two integers */
+		multiply,           /**< Multiplies two integers */
+		divide,             /**< Divides two integers */
+		less,               /**< Less than comparision */
+		less_or_equal,      /**< Less than or equal comparision */
+		equal,              /**< Value equality */
 	};
 
 	/** Computes some binary operation */
 	class compute_binary : public expr
 	{
 	public:
-		compute_binary(const location& loc) : expr(loc) { }
-		virtual void accept(expr_visitor& visitor);
-
-		/** Types of unary operations */
-		enum op_type
-		{
-			ADD,                /**< Adds two integers */
-			SUBTRACT,           /**< Subtracts two integers */
-			MULTIPLY,           /**< Multiplies two integers */
-			DIVIDE,             /**< Divides two integers */
-			LESS,               /**< Less than comparision */
-			LESS_OR_EQUAL,      /**< Less than or equal comparision */
-			GREATER,            /**< (extension) Greater than comparision */
-			GREATER_OR_EQUAL,   /**< (extension) Greater than or equal comparision */
-			EQUAL,              /**< Value equality */
-			NOT_EQUAL           /**< (extension) Value inequality */
-		};
+		virtual void accept(expr_visitor& visitor) const;
 
 		/** Type of expression */
-		op_type op;
+		compute_binary_type op;
 
 		/** Left sub expression */
-		std::unique_ptr<expr> left;
+		unique_ptr<expr> left;
 
 		/** Right sub expression */
-		std::unique_ptr<expr> right;
+		unique_ptr<expr> right;
 	};
 
 	/** Visitor class used to traverse expression trees */
@@ -299,20 +281,20 @@ namespace lcool { namespace ast
 	public:
 		virtual ~expr_visitor() { }
 
-		virtual void visit(assign& e) = 0;
-		virtual void visit(dispatch& e) = 0;
-		virtual void visit(conditional& e) = 0;
-		virtual void visit(loop& e) = 0;
-		virtual void visit(block& e) = 0;
-		virtual void visit(let& e) = 0;
-		virtual void visit(type_case& e) = 0;
-		virtual void visit(new_object& e) = 0;
-		virtual void visit(constant_bool& e) = 0;
-		virtual void visit(constant_int& e) = 0;
-		virtual void visit(constant_string& e) = 0;
-		virtual void visit(identifier& e) = 0;
-		virtual void visit(compute_unary& e) = 0;
-		virtual void visit(compute_binary& e) = 0;
+		virtual void visit(const assign&) = 0;
+		virtual void visit(const dispatch&) = 0;
+		virtual void visit(const conditional&) = 0;
+		virtual void visit(const loop&) = 0;
+		virtual void visit(const block&) = 0;
+		virtual void visit(const let&) = 0;
+		virtual void visit(const type_case&) = 0;
+		virtual void visit(const new_object&) = 0;
+		virtual void visit(const constant_bool&) = 0;
+		virtual void visit(const constant_int&) = 0;
+		virtual void visit(const constant_string&) = 0;
+		virtual void visit(const identifier&) = 0;
+		virtual void visit(const compute_unary&) = 0;
+		virtual void visit(const compute_binary&) = 0;
 	};
 
 	/** AST for cool methods */
@@ -322,35 +304,47 @@ namespace lcool { namespace ast
 		/** Method location */
 		location loc;
 
+		/** Method name */
+		std::string name;
+
 		/** Return type */
 		std::string type;
 
 		/** Method parameters */
-		std::map<std::string, std::string> params;
+		std::vector<std::pair<std::string, std::string>> params;
 
 		/** Method body */
-		std::unique_ptr<expr> body;
+		unique_ptr<expr> body;
 	};
 
 	/** AST for a cool class */
 	class cls
 	{
 	public:
+		// The compiler isn't able to work out that this class
+		//  cannot be copy constructed, so help it out a bit
+		cls()                 = default;
+		cls(cls&&)            = default;
+		cls& operator=(cls&&) = default;
+
 		/** Class location */
 		location loc;
+
+		/** Name of class */
+		std::string name;
 
 		/** Parent of the class (inherits from) */
 		boost::optional<std::string> parent;
 
 		/** Attribute definitions */
-		std::map<std::string, type_and_value> attributes;
+		std::vector<attribute> attributes;
 
 		/** Method definitions */
-		std::map<std::string, method> methods;
+		std::vector<method> methods;
 	};
 
 	/** Collection of classes which make up a program */
-	typedef std::map<std::string, cls> program;
+	typedef std::vector<cls> program;
 }}
 
 #endif

@@ -19,16 +19,17 @@
 
 namespace ast = lcool::ast;
 
-void ast::assign         ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
-void ast::dispatch       ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
-void ast::conditional    ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
-void ast::loop           ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
-void ast::block          ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
-void ast::let            ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
-void ast::type_case      ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
-void ast::new_object     ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
-void ast::constant_bool  ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
-void ast::constant_int   ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
-void ast::constant_string::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
-void ast::identifier     ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
-void ast::compute_unary  ::accept(ast::expr_visitor& visitor) { visitor.visit(*this); }
+void ast::assign         ::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }
+void ast::dispatch       ::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }
+void ast::conditional    ::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }
+void ast::loop           ::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }
+void ast::block          ::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }
+void ast::let            ::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }
+void ast::type_case      ::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }
+void ast::new_object     ::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }
+void ast::constant_bool  ::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }
+void ast::constant_int   ::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }
+void ast::constant_string::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }
+void ast::identifier     ::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }
+void ast::compute_unary  ::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }
+void ast::compute_binary ::accept(ast::expr_visitor& visitor) const { visitor.visit(*this); }

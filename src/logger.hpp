@@ -19,8 +19,11 @@
 #define LCOOL_LOGGER_HPP
 
 #include <boost/format/format_fwd.hpp>
+#include <cstdint>
 #include <iosfwd>
 #include <string>
+
+#include "smart_ptr.hpp"
 
 namespace lcool
 {
@@ -29,13 +32,13 @@ namespace lcool
 	{
 	public:
 		/** Filename of this position */
-		std::string filename;
+		shared_ptr<const std::string> filename;
 
 		/** Start line of the position (first line is 1) */
-		uint32_t line;
+		std::uint32_t line;
 
 		/** Start column of the position (first column is 1) */
-		uint32_t column;
+		std::uint32_t column;
 
 		/** Convert this location into a string */
 		std::string to_string() const;
