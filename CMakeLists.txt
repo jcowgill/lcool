@@ -15,7 +15,10 @@ list(APPEND CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra -pedantic")
 
 # Find LLVM and Boost
 find_package(Boost REQUIRED COMPONENTS)
-find_package(LLVM REQUIRED COMPONENTS support)
+find_package(LLVM REQUIRED COMPONENTS core)
+
+# Enable extended definitions for LLVM
+add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
 
 # Compile compiler using sources
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
