@@ -42,7 +42,7 @@ void lcool::program_structure::generate_structure(lcool::logger& log)
 	assert(_class_index.empty());
 
 	// Insert builtins
-	add_builtins(*this);
+	load_builtins(*this);
 
 	// Add all builtins to analyzed set
 	for (auto& pair : _class_index)

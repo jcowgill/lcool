@@ -22,9 +22,11 @@ add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
 
 # Compile compiler using sources
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
+set(BIN_DIR "${CMAKE_BINARY_DIR}")
 add_executable(lcoolc
 	"${SRC_DIR}/ast.cpp"
 	"${SRC_DIR}/ast.hpp"
+	"${BIN_DIR}/lcool_runtime.inc"
 	"${SRC_DIR}/builtins.cpp"
 	"${SRC_DIR}/builtins.hpp"
 	"${SRC_DIR}/lexer.cpp"
@@ -40,6 +42,12 @@ add_executable(lcoolc
 	"${SRC_DIR}/smart_ptr.hpp"
 )
 
+# Assemble builtins file
+add_custom_command(OUTPUT "${BIN_DIR}/lcool_runtime.inc"
+	COMMAND llvm-as -o - "${SRC_DIR}/lcool_runtime.ll" | xxd -i - "${BIN_DIR}/lcool_runtime.inc"
+	VERBATIM
+)
+
 # Set options
-include_directories(${SRC_DIR} ${BOOST_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
+include_directories(${SRC_DIR} ${BIN_DIR} ${BOOST_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
 target_link_libraries(lcoolc ${BOOST_LIBRARIES} ${LLVM_LIBRARIES})

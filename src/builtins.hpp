@@ -23,9 +23,9 @@ namespace lcool
 	class program_structure;
 
 	/**
-	 * Adds all the builtin classes to the given program structure
+	 * Loads all the builtin classes to the given program structure
 	 */
-	void add_builtins(program_structure& program);
+	void load_builtins(program_structure& program);
 }
 
 #endif
