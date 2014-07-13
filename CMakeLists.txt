@@ -14,8 +14,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 list(APPEND CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra -pedantic")
 
 # Find LLVM and Boost
-find_package(Boost REQUIRED COMPONENTS)
-find_package(LLVM REQUIRED COMPONENTS core)
+find_package(Boost REQUIRED)
+find_package(LLVM REQUIRED)
 
 # Enable extended definitions for LLVM
 add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
