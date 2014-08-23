@@ -22,6 +22,45 @@
 ;  Objects used as inputs to functions do not need their refcounts updated
 ;  Objects returned from functions should have their refcounts incremented
 
+; Public types list
+; =================
+; Object$vtabletype
+; Object
+; IO$vtabletype
+; IO
+; String
+; Int
+; Bool
+
+; Public constant list (rodata)
+; =============================
+; Object$vtable  (Object$vtabletype)
+; IO$vtable      (IO$vtabletype)
+; String$vtable  (Object$vtabletype)
+; Int$vtable     (Object$vtabletype)
+; Bool$vtable    (Object$vtabletype)
+
+; Public variable list (data)
+; ===========================
+; String$empty   (String)
+
+; Public function list
+; ====================
+; (all Object and IO functions are called through a vtable)
+;
+; alloc_object
+; instance_of
+; null_check
+; refcount_inc
+; refcount_dec
+;
+; Int$box
+; Bool$box
+;
+; String.length
+; String.concat
+; String.substr
+
 ; Object structures
 %Object$vtabletype = type
 {
@@ -238,6 +277,11 @@ Null:
 ; Allocate a string (uninitialized)
 define internal fastcc %String* @alloc_string(i32 %size)
 {
+	; If size is 0, just return the empty string
+	%is_empty = icmp eq i32 %new_len, 0
+	br i1 %is_empty, label %Empty, label %DoAllocate
+
+DoAllocate:
 	; Get size of new object
 	%empty_size = ptrtoint %String* getelementptr (%String* null, i32 1) to i32
 	%obj_size = add nuw i32 %size, %empty_size
@@ -250,6 +294,12 @@ define internal fastcc %String* @alloc_string(i32 %size)
 	%len_ptr = getelementptr %String* %str, i32 0, i32 1
 	store i32 %size, i32* %len_ptr
 	ret %String* %str
+
+Empty:
+	; Return the empty string
+	%empty_object = getelementptr %String* @String$empty, i32 0, i32 0
+	call fastcc void @refcount_inc(%Object* %empty_object)
+	ret %String* @String$empty
 }
 
 ; Fast version of copy for immutable objects
