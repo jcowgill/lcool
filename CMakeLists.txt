@@ -26,9 +26,11 @@ set(BIN_DIR "${CMAKE_BINARY_DIR}")
 add_executable(lcoolc
 	"${SRC_DIR}/ast.cpp"
 	"${SRC_DIR}/ast.hpp"
-	"${BIN_DIR}/lcool_runtime.inc"
 	"${SRC_DIR}/builtins.cpp"
 	"${SRC_DIR}/builtins.hpp"
+	"${SRC_DIR}/cool_program.cpp"
+	"${SRC_DIR}/cool_program.hpp"
+	"${BIN_DIR}/lcool_runtime.inc"
 	"${SRC_DIR}/lexer.cpp"
 	"${SRC_DIR}/lexer.hpp"
 	"${SRC_DIR}/logger.cpp"
@@ -37,8 +39,6 @@ add_executable(lcoolc
 	"${SRC_DIR}/parser.cpp"
 	"${SRC_DIR}/parser.hpp"
 	"${SRC_DIR}/parser_dump.cpp"
-	"${SRC_DIR}/program_structure.cpp"
-	"${SRC_DIR}/program_structure.hpp"
 	"${SRC_DIR}/smart_ptr.hpp"
 )
 

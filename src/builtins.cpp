@@ -23,7 +23,7 @@
 #include <string>
 
 #include "builtins.hpp"
-#include "program_structure.hpp"
+#include "cool_program.hpp"
 
 using lcool::unique_ptr;
 
@@ -34,12 +34,9 @@ using llvm::ParseBitcodeFile;
 using llvm::StringRef;
 
 // LLVM builtins bitcode file
-namespace
-{
-	const unsigned char bitcode_data[] = {
+static const unsigned char bitcode_data[] = {
 #include "lcool_runtime.inc"
-	};
-}
+};
 
 // Link the runtime file into the given module
 static void link_runtime(Module* dest)
@@ -58,8 +55,14 @@ static void link_runtime(Module* dest)
 	}
 }
 
-void lcool::load_builtins(lcool::program_structure& program)
+void lcool::load_builtins(lcool::cool_program& program)
 {
 	// Link in runtime library
-	link_runtime(&program.llvm_module());
+	link_runtime(&program.module());
+
+	/*
+	 * Register builtin classes
+	 * Register class methods + vtables
+	 * Handle string class (which is special)
+	 */
 }

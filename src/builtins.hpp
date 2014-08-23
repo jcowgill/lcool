@@ -20,12 +20,12 @@
 
 namespace lcool
 {
-	class program_structure;
+	class cool_program;
 
 	/**
 	 * Loads all the builtin classes to the given program structure
 	 */
-	void load_builtins(program_structure& program);
+	void load_builtins(cool_program& program);
 }
 
 #endif
