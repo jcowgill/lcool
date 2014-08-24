@@ -389,7 +389,7 @@ cool_class* lcool::cool_program::insert_class(unique_ptr<cool_class> cls)
 	auto iter = _classes.emplace(std::move(name), std::move(cls));
 
 	if (iter.second)
-		return iter.first.second.get();
+		return iter.first->second.get();
 
 	return nullptr;
 }

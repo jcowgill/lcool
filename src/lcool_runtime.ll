@@ -278,7 +278,7 @@ Null:
 define internal fastcc %String* @alloc_string(i32 %size)
 {
 	; If size is 0, just return the empty string
-	%is_empty = icmp eq i32 %new_len, 0
+	%is_empty = icmp eq i32 %size, 0
 	br i1 %is_empty, label %Empty, label %DoAllocate
 
 DoAllocate:
