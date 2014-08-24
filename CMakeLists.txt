@@ -43,8 +43,14 @@ add_executable(lcoolc
 )
 
 # Assemble builtins file
+add_custom_command(OUTPUT "${BIN_DIR}/lcool_runtime.bc"
+	COMMAND llvm-as -o "${BIN_DIR}/lcool_runtime.bc" "${SRC_DIR}/lcool_runtime.ll"
+	VERBATIM
+)
+
 add_custom_command(OUTPUT "${BIN_DIR}/lcool_runtime.inc"
-	COMMAND llvm-as -o - "${SRC_DIR}/lcool_runtime.ll" | xxd -i - "${BIN_DIR}/lcool_runtime.inc"
+	DEPENDS "${BIN_DIR}/lcool_runtime.bc"
+	COMMAND xxd -i - "${BIN_DIR}/lcool_runtime.inc" < "${BIN_DIR}/lcool_runtime.bc"
 	VERBATIM
 )
 
