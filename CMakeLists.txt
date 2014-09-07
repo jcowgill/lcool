@@ -15,7 +15,7 @@ list(APPEND CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra -pedantic")
 
 # Find LLVM and Boost
 find_package(Boost REQUIRED)
-find_package(LLVM REQUIRED)
+find_package(LLVM 3.5 REQUIRED)
 
 # Enable extended definitions for LLVM
 add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)

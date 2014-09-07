@@ -18,8 +18,7 @@
 #ifndef LCOOL_COOL_PROGRAM_HPP
 #define LCOOL_COOL_PROGRAM_HPP
 
-//#include <llvm/IR/Constants.h>
-//#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <map>

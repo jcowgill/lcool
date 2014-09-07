@@ -4,7 +4,7 @@
 if (DEFINED LLVM_ROOT)
 	find_program(LLVM_CONFIG llvm-config "${LLVM_ROOT}/bin")
 endif()
-find_program(LLVM_CONFIG NAMES llvm-config llvm-config-3.1)
+find_program(LLVM_CONFIG NAMES llvm-config)
 
 if (LLVM_CONFIG)
 	# Get llvm variables
