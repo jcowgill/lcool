@@ -37,20 +37,20 @@ namespace
 		void dump(const ast::expr&);
 
 		// Expression dumpers
-		virtual void visit(const ast::assign&);
-		virtual void visit(const ast::dispatch&);
-		virtual void visit(const ast::conditional&);
-		virtual void visit(const ast::loop&);
-		virtual void visit(const ast::block&);
-		virtual void visit(const ast::let&);
-		virtual void visit(const ast::type_case&);
-		virtual void visit(const ast::new_object&);
-		virtual void visit(const ast::constant_bool&);
-		virtual void visit(const ast::constant_int&);
-		virtual void visit(const ast::constant_string&);
-		virtual void visit(const ast::identifier&);
-		virtual void visit(const ast::compute_unary&);
-		virtual void visit(const ast::compute_binary&);
+		virtual void visit(const ast::assign&) override;
+		virtual void visit(const ast::dispatch&) override;
+		virtual void visit(const ast::conditional&) override;
+		virtual void visit(const ast::loop&) override;
+		virtual void visit(const ast::block&) override;
+		virtual void visit(const ast::let&) override;
+		virtual void visit(const ast::type_case&) override;
+		virtual void visit(const ast::new_object&) override;
+		virtual void visit(const ast::constant_bool&) override;
+		virtual void visit(const ast::constant_int&) override;
+		virtual void visit(const ast::constant_string&) override;
+		virtual void visit(const ast::identifier&) override;
+		virtual void visit(const ast::compute_unary&) override;
+		virtual void visit(const ast::compute_binary&) override;
 
 	private:
 		// Prints the indent and returns the output stream

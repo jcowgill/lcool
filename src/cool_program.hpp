@@ -174,7 +174,7 @@ namespace lcool
 		virtual llvm::Value* call(
 			llvm::IRBuilder<> builder,
 			llvm::Value* object,
-			std::initializer_list<llvm::Value*> args);
+			std::initializer_list<llvm::Value*> args) override;
 
 	protected:
 		cool_vtable_method(const std::string& name, const cool_class& return_type);
@@ -204,8 +204,8 @@ namespace lcool
 		llvm::Function* llvm_func();
 
 		// See cool_method for docs
-		virtual void bake();
-		virtual bool is_baked() const;
+		virtual void bake() override;
+		virtual bool is_baked() const override;
 	};
 
 	/** Contains the LLVM structure of a cool class */
@@ -297,8 +297,8 @@ namespace lcool
 		cool_user_class(std::string&& name, const cool_class* parent);
 
 		// See cool_class for docs
-		virtual void bake();
-		virtual bool is_baked() const;
+		virtual void bake() override;
+		virtual bool is_baked() const override;
 	};
 
 	/**
@@ -350,7 +350,6 @@ namespace lcool
 		std::map<std::string, unique_ptr<cool_class>> _classes;
 		llvm::Module _module;
 	};
-
 }
 
 #endif

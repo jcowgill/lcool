@@ -85,11 +85,11 @@ namespace lcool
 		/** Constructs a logger using the given stream */
 		explicit logger_ostream(std::ostream& stream);
 
-		virtual bool has_errors() const;
-		virtual void warning(const std::string& str);
-		virtual void warning(const location& loc, const std::string& str);
-		virtual void error(const std::string& str);
-		virtual void error(const location& loc, const std::string& str);
+		virtual bool has_errors() const override;
+		virtual void warning(const std::string& str) override;
+		virtual void warning(const location& loc, const std::string& str) override;
+		virtual void error(const std::string& str) override;
+		virtual void error(const location& loc, const std::string& str) override;
 
 	private:
 		std::ostream& stream;

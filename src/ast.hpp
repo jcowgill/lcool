@@ -69,7 +69,7 @@ namespace lcool { namespace ast
 	class assign : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** Identifier to assign to */
 		std::string id;
@@ -82,7 +82,7 @@ namespace lcool { namespace ast
 	class dispatch : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** Name of method to call */
 		std::string method_name;
@@ -101,7 +101,7 @@ namespace lcool { namespace ast
 	class conditional : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** Predicate to test on */
 		unique_ptr<expr> predicate;
@@ -117,7 +117,7 @@ namespace lcool { namespace ast
 	class loop : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** Predicate to test on */
 		unique_ptr<expr> predicate;
@@ -130,7 +130,7 @@ namespace lcool { namespace ast
 	class block : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** List of statements, last statement is the value of the block */
 		std::vector<unique_ptr<expr>> statements;
@@ -140,7 +140,7 @@ namespace lcool { namespace ast
 	class let : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** List of variables to declare */
 		std::vector<attribute> vars;
@@ -167,7 +167,7 @@ namespace lcool { namespace ast
 	class type_case : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** Value to test type of */
 		unique_ptr<expr> value;
@@ -180,7 +180,7 @@ namespace lcool { namespace ast
 	class new_object : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** Type of the new object */
 		std::string type;
@@ -190,7 +190,7 @@ namespace lcool { namespace ast
 	class constant_bool : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** Value of the constant */
 		bool value = false;
@@ -200,7 +200,7 @@ namespace lcool { namespace ast
 	class constant_int : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** Value of the constant */
 		std::int32_t value = 0;
@@ -210,7 +210,7 @@ namespace lcool { namespace ast
 	class constant_string : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** Value of the constant (processed to remove escape codes) */
 		std::string value;
@@ -220,7 +220,7 @@ namespace lcool { namespace ast
 	class identifier : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** Identifier to read */
 		std::string id;
@@ -238,7 +238,7 @@ namespace lcool { namespace ast
 	class compute_unary : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** Type of expression */
 		compute_unary_type op;
@@ -263,7 +263,7 @@ namespace lcool { namespace ast
 	class compute_binary : public expr
 	{
 	public:
-		virtual void accept(expr_visitor& visitor) const;
+		virtual void accept(expr_visitor& visitor) const override;
 
 		/** Type of expression */
 		compute_binary_type op;
