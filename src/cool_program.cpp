@@ -248,6 +248,16 @@ bool lcool::cool_user_method::is_baked() const
 
 // ========= cool_class =========================================
 
+lcool::cool_class::cool_class(const std::string& name, const cool_class* parent)
+	: _name(name), _parent(parent)
+{
+}
+
+lcool::cool_class::cool_class(std::string&& name, const cool_class* parent)
+	: _name(std::move(name)), _parent(parent)
+{
+}
+
 const std::string& lcool::cool_class::name() const
 {
 	return _name;
@@ -290,21 +300,7 @@ const cool_method* lcool::cool_class::lookup_method(const std::string& name, boo
 	return nullptr;
 }
 
-// ========= cool_user_class ====================================
-
-lcool::cool_user_class::cool_user_class(const std::string& name, const cool_class* parent)
-{
-	_name = name;
-	_parent = parent;
-}
-
-lcool::cool_user_class::cool_user_class(std::string&& name, const cool_class* parent)
-{
-	_name = std::move(name);
-	_parent = parent;
-}
-
-bool lcool::cool_user_class::insert_attribute(unique_ptr<cool_attribute> attribute)
+bool lcool::cool_class::insert_attribute(unique_ptr<cool_attribute> attribute)
 {
 	assert(!is_baked());
 
@@ -313,7 +309,7 @@ bool lcool::cool_user_class::insert_attribute(unique_ptr<cool_attribute> attribu
 	return iter.second;
 }
 
-bool lcool::cool_user_class::insert_method(unique_ptr<cool_method> method)
+bool lcool::cool_class::insert_method(unique_ptr<cool_method> method)
 {
 	assert(!is_baked());
 
@@ -322,16 +318,28 @@ bool lcool::cool_user_class::insert_method(unique_ptr<cool_method> method)
 	return iter.second;
 }
 
-const llvm::StructType& lcool::cool_user_class::llvm_type() const
+const llvm::StructType& lcool::cool_class::llvm_type() const
 {
 	assert(is_baked());
 	return *_llvm_type;
 }
 
-const llvm::GlobalVariable& lcool::cool_user_class::llvm_vtable() const
+const llvm::GlobalVariable& lcool::cool_class::llvm_vtable() const
 {
 	assert(is_baked());
 	return *_vtable;
+}
+
+// ========= cool_user_class ====================================
+
+lcool::cool_user_class::cool_user_class(const std::string& name, const cool_class* parent)
+	: cool_class(name, parent)
+{
+}
+
+lcool::cool_user_class::cool_user_class(std::string&& name, const cool_class* parent)
+	: cool_class(std::move(name), parent)
+{
 }
 
 void lcool::cool_user_class::bake()
@@ -343,7 +351,6 @@ bool lcool::cool_user_class::is_baked() const
 {
 	return _vtable != nullptr;
 }
-
 
 // ========= cool_program =======================================
 

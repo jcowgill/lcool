@@ -212,6 +212,8 @@ namespace lcool
 	class cool_class
 	{
 	public:
+		cool_class(const std::string& name, const cool_class* parent);
+		cool_class(std::string&& name, const cool_class* parent);
 		virtual ~cool_class() = default;
 
 		/** Returns the name of this class */
@@ -237,18 +239,32 @@ namespace lcool
 		const cool_method* lookup_method(const std::string& name, bool recursive = false) const;
 
 		/**
+		 * Inserts an attribute into the class
+		 *
+		 * It is illegal to call this method after this class is baked
+		 */
+		bool insert_attribute(unique_ptr<cool_attribute> attribute);
+
+		/**
+		 * Inserts a method into the class
+		 *
+		 * It is illegal to call this method after this class is baked
+		 */
+		bool insert_method(unique_ptr<cool_method> method);
+
+		/**
 		 * Returns the LLVM structure used for this class
 		 *
 		 * It is illegal to call this method before the class has been baked.
 		 */
-		virtual const llvm::StructType& llvm_type() const = 0;
+		const llvm::StructType& llvm_type() const;
 
 		/**
 		 * Returns the LLVM vtable object used for this class
 		 *
 		 * It is illegal to call this method before the class has been baked.
 		 */
-		virtual const llvm::GlobalVariable& llvm_vtable() const = 0;
+		const llvm::GlobalVariable& llvm_vtable() const;
 
 		/**
 		 * Bakes this class
@@ -267,6 +283,9 @@ namespace lcool
 		const cool_class* _parent = nullptr;
 		std::map<std::string, unique_ptr<cool_attribute>> _attributes;
 		std::map<std::string, unique_ptr<cool_method>> _methods;
+
+		llvm::StructType* _llvm_type = nullptr;
+		llvm::GlobalVariable* _vtable = nullptr;
 	};
 
 	/** A user-defined class */
@@ -277,29 +296,9 @@ namespace lcool
 		cool_user_class(const std::string& name, const cool_class* parent);
 		cool_user_class(std::string&& name, const cool_class* parent);
 
-		/**
-		 * Inserts an attribute into the class
-		 *
-		 * It is illegal to call this method after this class is baked
-		 */
-		bool insert_attribute(unique_ptr<cool_attribute> attribute);
-
-		/**
-		 * Inserts a method into the class
-		 *
-		 * It is illegal to call this method after this class is baked
-		 */
-		bool insert_method(unique_ptr<cool_method> method);
-
 		// See cool_class for docs
-		virtual const llvm::StructType& llvm_type() const;
-		virtual const llvm::GlobalVariable& llvm_vtable() const;
 		virtual void bake();
 		virtual bool is_baked() const;
-
-	private:
-		llvm::StructType* _llvm_type = nullptr;
-		llvm::GlobalVariable* _vtable = nullptr;
 	};
 
 	/**
