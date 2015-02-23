@@ -18,269 +18,110 @@
 #include <cassert>
 #include <set>
 
+#include "ast.hpp"
 #include "builtins.hpp"
 #include "cool_program.hpp"
 
-using lcool::unique_ptr;
+using namespace lcool;
 
-using lcool::cool_attribute;
-using lcool::cool_method;
-using lcool::cool_class;
-using lcool::cool_program;
+// ========= cool_method =========================================
 
-#if 0
+lcool::cool_method::cool_method(std::unique_ptr<cool_method_slot> slot)
+{
+	_slot = slot.release();
+	_declaring_class = _slot->declaring_class;
+}
 
-lcool::cool_program::cool_program(const ast::program& program, llvm::LLVMContext& context)
-	: _program(program), _module("lcool_prog", context)
+lcool::cool_method::cool_method(cool_class* declaring_class, cool_method* base_method)
+	: _slot(base_method->slot()), _declaring_class(declaring_class)
 {
 }
 
-void lcool::cool_program::generate_structure(lcool::logger& log)
+lcool::cool_method::~cool_method()
 {
-	std::set<class_structure*> analyzed, open;
-
-	// Do sanity check
-	assert(_class_index.empty());
-
-	// Insert builtins
-	load_builtins(*this);
-
-	// Add all builtins to analyzed set
-	for (auto& pair : _class_index)
-		analyzed.insert(&pair.second);
-
-	// Index all classes first
-	for (const ast::cls& cls : _program)
-	{
-		class_structure* structure = insert_class(cls.name, class_structure(cls));
-
-		if (structure != nullptr)
-		{
-			open.insert(structure);
-		}
-		else
-		{
-#warning  Print error
-		}
-	}
-
-	// Resolve parent classes
-	for (auto& pair : _class_index)
-	{
-		if (!pair.second.resolve_parent_type(*this, log))
-		{
-			// Error resolving class, remove from open set
-			assert(log.has_errors());
-			open.erase(&pair.second);
-		}
-	}
-
-	// We must analyze classes so that their parent types are analyzed first
-	bool processed_something;
-	do
-	{
-		processed_something = false;
-
-		// Analyze any class we find with its parent in the analyzed set
-		auto it = open.begin();
-		while (it != open.end())
-		{
-			auto current = it++;
-			auto cls_ptr = *current;
-
-			if (analyzed.count(cls_ptr->parent()) == 1)
-			{
-				open.erase(current);
-				if (cls_ptr->analyze(*this, log))
-				{
-					analyzed.insert(cls_ptr);
-					processed_something = true;
-				}
-			}
-		}
-	}
-	while (processed_something);
-
-	// If the open set isn't empty, there must be an inheritance cycle
-	if (!open.empty())
-	{
-#warning Print some error here
-	}
+	// Delete slot if non-null and we own it
+	if (_slot != nullptr && _slot->declaring_class == _declaring_class)
+		delete _slot;
 }
 
-const ast::program& lcool::cool_program::program() const
-{
-	return _program;
-}
-
-class_structure* lcool::cool_program::insert_class(const std::string& name, class_structure&& cls)
-{
-	auto result = _class_index.emplace(name, std::move(cls));
-	if (result.second)
-		return &result.first->second;
-
-	return nullptr;
-}
-
-const class_structure* lcool::cool_program::lookup_class(const std::string& name) const
-{
-	auto iter = _class_index.find(name);
-	if (iter != _class_index.end())
-		return &iter->second;
-
-	return nullptr;
-}
-
-llvm::Module& lcool::cool_program::llvm_module()
-{
-	return _module;
-}
-
-const llvm::Module& lcool::cool_program::llvm_module() const
-{
-	return _module;
-}
-
-llvm::GlobalValue* get_global(global_id id)
-{
-	return _globals[static_cast<int>(id)];
-}
-
-void set_global(global_id id, llvm::GlobalValue* value)
-{
-	int int_id = static_cast<int>(id);
-
-	if (_globals.size() <= int_id)
-		_globals.resize(int_id + 1);
-
-	_globals[int_id] = value;
-}
-
-#endif
-
-// ========= cool_method =======================================
-
-lcool::cool_method::cool_method(const std::string& name, const cool_class& return_type)
-	: _name(name), _return_type(return_type)
-{
-}
-
-lcool::cool_method::cool_method(std::string&& name, const cool_class& return_type)
-	: _name(std::move(name)), _return_type(return_type)
-{
-}
-
-const std::string& lcool::cool_method::name() const
-{
-	return _name;
-}
-
-const cool_class& lcool::cool_method::return_type() const
-{
-	return _return_type;
-}
-
-const std::vector<const cool_class*>& lcool::cool_method::parameter_types() const
-{
-	return _parameter_types;
-}
-
-const llvm::Function* lcool::cool_method::llvm_func() const
-{
-	assert(is_baked());
-	return _func;
-}
-
-// ========= cool_vtable_method ================================
-
-lcool::cool_vtable_method::cool_vtable_method(const std::string& name, const cool_class& return_type)
-	: cool_method(name, return_type)
-{
-}
-
-lcool::cool_vtable_method::cool_vtable_method(std::string&& name, const cool_class& return_type)
-	: cool_method(std::move(name), return_type)
-{
-}
-
-llvm::Value* lcool::cool_vtable_method::call(
+llvm::Value* lcool::cool_method::call(
 	llvm::IRBuilder<> builder,
-	llvm::Value* object,
-	std::initializer_list<llvm::Value*> args)
+	const std::vector<llvm::Value*>& args,
+	bool static_call) const
 {
-	#warning TODO lcool::cool_vtable_method::call
-	return nullptr;
+	assert(_func != nullptr);
+	assert(!_func->arg_empty());
+	assert(args.size() >= 1);
+	assert(_slot->vtable_index >= 0);
+
+	// object must be the same type as _func's first argument
+	llvm::Value* instance = *args.begin();
+	assert(_func->getFunctionType()->getParamType(0) == instance->getType());
+
+	// Upcast to object
+	llvm::Value* instance_upcast = _slot->declaring_class->upcast_to_object(builder, instance);
+
+	// Call null_check on the object
+	llvm::Module* module = _func->getParent();
+	llvm::Function* null_check_func = module->getFunction("null_check");
+	assert(null_check_func != nullptr);
+
+	builder.CreateCall(null_check_func, instance_upcast);
+
+	// If declaring class is final, this can be a static call
+	if (_declaring_class->is_final())
+		static_call = true;
+
+	// Get function to call
+	llvm::Value* func;
+	if (static_call)
+	{
+		func = _func;
+	}
+	else
+	{
+		// Get pointer to vtable
+		llvm::Type* ptr_vtable_type = _slot->declaring_class->llvm_vtable()->getType()->getPointerTo();
+
+		llvm::Value* zero = builder.getInt32(0);
+		std::vector<llvm::Value*> gep_args1{ zero, zero };
+		llvm::Value* ptr_ptr_vtable = builder.CreateInBoundsGEP(instance_upcast, gep_args1);
+		llvm::Value* ptr_obj_vtable = builder.CreateLoad(ptr_ptr_vtable);
+		llvm::Value* ptr_vtable = builder.CreateBitCast(ptr_obj_vtable, ptr_vtable_type);
+
+		// Get destination function pointer
+		llvm::Value* vtable_index = builder.getInt32(_slot->vtable_index);
+		std::vector<llvm::Value*> gep_args2{ zero, vtable_index };
+		llvm::Value* ptr_func = builder.CreateInBoundsGEP(ptr_vtable, gep_args2);
+		func = builder.CreateLoad(ptr_func);
+	}
+
+	// Call it
+	return builder.CreateCall(func, args);
 }
 
-// ========= cool_user_method ==================================
-
-lcool::cool_user_method::cool_user_method(const std::string& name, const cool_class& return_type)
-	: cool_vtable_method(name, return_type)
-{
-}
-
-lcool::cool_user_method::cool_user_method(std::string&& name, const cool_class& return_type)
-	: cool_vtable_method(std::move(name), return_type)
-{
-}
-
-void lcool::cool_user_method::add_parameter(const cool_class& type)
-{
-	assert(!is_baked());
-	_parameter_types.push_back(&type);
-}
-
-llvm::Function* lcool::cool_user_method::llvm_func()
-{
-	assert(is_baked());
-	return _func;
-}
-
-void lcool::cool_user_method::bake()
-{
-	#warning TODO lcool::cool_user_method::bake
-}
-
-bool lcool::cool_user_method::is_baked() const
-{
-	return _vtable_type != nullptr;
-}
-
-// ========= cool_class =========================================
+// ========= cool_class ==========================================
 
 lcool::cool_class::cool_class(const std::string& name, const cool_class* parent)
 	: _name(name), _parent(parent)
 {
 }
 
-lcool::cool_class::cool_class(std::string&& name, const cool_class* parent)
-	: _name(std::move(name)), _parent(parent)
+bool lcool::cool_class::is_subclass_of(const cool_class* other) const
 {
+	return other == this ||
+	       (_parent != nullptr &&  _parent->is_subclass_of(other));
 }
 
-const std::string& lcool::cool_class::name() const
+bool lcool::cool_class::is_final() const
 {
-	return _name;
-}
-
-const cool_class* lcool::cool_class::parent() const
-{
-	return _parent;
+	return false;
 }
 
 const cool_attribute* lcool::cool_class::lookup_attribute(const std::string& name) const
 {
 	auto iter = _attributes.find(name);
 	if (iter != _attributes.end())
-		return iter->second.get();
-
-	return nullptr;
-}
-
-cool_method* lcool::cool_class::lookup_method(const std::string& name)
-{
-	auto iter = _methods.find(name);
-	if (iter != _methods.end())
 		return iter->second.get();
 
 	return nullptr;
@@ -300,34 +141,57 @@ const cool_method* lcool::cool_class::lookup_method(const std::string& name, boo
 	return nullptr;
 }
 
-bool lcool::cool_class::insert_attribute(unique_ptr<cool_attribute> attribute)
+llvm::Value* lcool::cool_class::create_object(llvm::IRBuilder<> builder) const
 {
-	assert(!is_baked());
-
-	std::string name = attribute->name;
-	auto iter = _attributes.emplace(std::move(name), std::move(attribute));
-	return iter.second;
+	return builder.CreateCall(_constructor);
 }
 
-bool lcool::cool_class::insert_method(unique_ptr<cool_method> method)
+llvm::Value* lcool::cool_class::upcast_to(llvm::IRBuilder<> builder, llvm::Value* value, const cool_class* to) const
 {
-	assert(!is_baked());
+	// Handle trivial case
+	if (to == this)
+		return value;
 
-	std::string name = method->name();
-	auto iter = _methods.emplace(std::move(name), std::move(method));
-	return iter.second;
+	// We want to create a GEP with n zeros so that we get the correct struct type
+	int num_zeros = 1;
+	const cool_class* current = this;
+
+	while (current != to)
+	{
+		assert(current != nullptr);
+		current = current->_parent;
+		num_zeros++;
+	}
+
+	// Do the upcast
+	std::vector<llvm::Value*> gep_args(num_zeros, builder.getInt32(0));
+	return builder.CreateInBoundsGEP(value, gep_args);
 }
 
-const llvm::StructType& lcool::cool_class::llvm_type() const
+llvm::Value* lcool::cool_class::upcast_to_object(llvm::IRBuilder<> builder, llvm::Value* value) const
 {
-	assert(is_baked());
-	return *_llvm_type;
+	const cool_class* cls = this;
+	while (cls->_parent != nullptr)
+		cls = cls->_parent;
+
+	return upcast_to(builder, value, cls);
 }
 
-const llvm::GlobalVariable& lcool::cool_class::llvm_vtable() const
+llvm::Value* lcool::cool_class::downcast(llvm::IRBuilder<> builder, llvm::Value* value) const
 {
-	assert(is_baked());
-	return *_vtable;
+	return builder.CreateBitCast(value, _llvm_type->getPointerTo());
+}
+
+void lcool::cool_class::refcount_inc(llvm::IRBuilder<> builder, llvm::Value* value) const
+{
+	// Call refcount_inc on value given
+	builder.CreateCall(_vtable->getParent()->getFunction("refcount_inc"), value);
+}
+
+void lcool::cool_class::refcount_dec(llvm::IRBuilder<> builder, llvm::Value* value) const
+{
+	// Call refcount_dec on value given
+	builder.CreateCall(_vtable->getParent()->getFunction("refcount_dec"), value);
 }
 
 // ========= cool_user_class ====================================
@@ -342,40 +206,25 @@ lcool::cool_user_class::cool_user_class(std::string&& name, const cool_class* pa
 {
 }
 
-void lcool::cool_user_class::bake()
+bool lcool::cool_user_class::insert_attribute(unique_ptr<cool_attribute> attribute)
 {
-	#warning TODO lcool::cool_user_class::bake
+	std::string name = attribute->name;
+	auto iter = _attributes.emplace(std::move(name), std::move(attribute));
+	return iter.second;
 }
 
-bool lcool::cool_user_class::is_baked() const
+bool lcool::cool_user_class::insert_method(unique_ptr<cool_method> method)
 {
-	return _vtable != nullptr;
+	std::string name = method->slot()->name;
+	auto iter = _methods.emplace(std::move(name), std::move(method));
+	return iter.second;
 }
 
 // ========= cool_program =======================================
 
 lcool::cool_program::cool_program(llvm::LLVMContext& context)
-	: _module("lcool program", context)
+	: _module("lcool_program", context)
 {
-}
-
-llvm::Module& lcool::cool_program::module()
-{
-	return _module;
-}
-
-const llvm::Module& lcool::cool_program::module() const
-{
-	return _module;
-}
-
-cool_class* lcool::cool_program::lookup_class(const std::string& name)
-{
-	auto iter = _classes.find(name);
-	if (iter != _classes.end())
-		return iter->second.get();
-
-	return nullptr;
 }
 
 const cool_class* lcool::cool_program::lookup_class(const std::string& name) const
@@ -389,31 +238,11 @@ const cool_class* lcool::cool_program::lookup_class(const std::string& name) con
 
 cool_class* lcool::cool_program::insert_class(unique_ptr<cool_class> cls)
 {
-	assert(!_baked);
-
-	// Insert into classes list
 	std::string name = cls->name();
-	auto iter = _classes.emplace(std::move(name), std::move(cls));
-
-	if (iter.second)
-		return iter.first->second.get();
+	auto result = _classes.emplace(name, std::move(cls));
+	if (result.second)
+		return result.first->second.get();
 
 	return nullptr;
-}
 
-void lcool::cool_program::bake()
-{
-	// This program class has nothing special to be baked, so just bake all the classes
-	if (!_baked)
-	{
-		for (auto& kv : _classes)
-			kv.second->bake();
-
-		_baked = true;
-	}
-}
-
-bool lcool::cool_program::is_baked() const
-{
-	return _baked;
 }

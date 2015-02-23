@@ -28,73 +28,6 @@
 
 namespace lcool
 {
-	/*
-	Program
-	=======
-	List of all classes
-	LLVM module where code for everything is stored
-	- Global functions are accessed directly with module.getFunction
-
-	Class
-	=====
-	Name
-	Reference to parent class (or null for object)
-	List of attributes
-	List of methods
-	Reference to vtable object
-	Reference to structure type
-	Constructor function
-	Object size (bytes)
-	 Calculated and stored in vtable (not used directly otherwise)
-
-	Func: Create object
-	 Allocate and call constructor
-	 Noop for Int and Bool (returns 0/false)
-
-	Func: Upcast to parent (fails if this is object)
-	Func: Upcast to Object (noop if this is object)
-	 For Int and Bool, these functions will box the value
-
-	Func: Downcast from Object (or whatever)
-	 For Int and Bool, this unboxes the given value
-	 For others, this is just a bitcast
-
-	Func: Inc refcount
-	Func: Dec refcount
-	 Noop for Int and Bool
-
-	----
-	Each class needs generating
-	 Class structure type
-	 Class vtable object
-	 *Constructor function
-	 *Copy constructor function
-	 *Destructor
-	 Slots for all methods
-	 Slots for all attributes
-
-	 * If applicable
-
-	Attribute
-	=========
-	Name
-	Type (reference to class object)
-	Structure Index (nth item in class structure, NOT IN BYTES)
-
-	Method
-	======
-	Name
-	Return type
-	List of types of arguments
-	LLVM function (not for builtin / special methods)
-
-	new
-	override
-	special (string ops)
-
-	Func: Call method
-	 */
-
 	class cool_class;
 
 	/** Contains information about an attribute */
@@ -114,98 +47,115 @@ namespace lcool
 		int slot;
 	};
 
-	/** Contains information about a method */
+	/** Contains information about a method slot */
+	struct cool_method_slot
+	{
+		/** The name of this method */
+		std::string name;
+
+		/** The return type of this method */
+		const cool_class* return_type;
+
+		/** A list containing the types of this method's parameters */
+		std::vector<const cool_class*> parameter_types;
+
+		/**
+		 * The class which this method is declared in
+		 *
+		 * Since this is a slot class, this is always the class the method
+		 * was originally declared in.
+		 */
+		const cool_class* declaring_class;
+
+		/** Index within the vtable a pointer to this method is found */
+		int vtable_index;
+	};
+
+	/**
+	 * Contains information about a method definition
+	 *
+	 * Each time a subclass overrides a method, a new instance of this class is
+	 * created but the old instance of cool_method_slot is reused.
+	 *
+	 * The memory allocated for the method's slot is owned by the base method
+	 * (ie the method where declaring_class == slot.declaring_class).
+	 */
 	class cool_method
 	{
 	public:
-		virtual ~cool_method() = default;
+		/**
+		 * Creates a new base method using a given method slot
+		 *
+		 * This method will take ownership of the slot. declaring_class will
+		 * be set to slot.declaring_class.
+		 */
+		cool_method(std::unique_ptr<cool_method_slot> slot);
 
-		/** The name of this method */
-		const std::string& name() const;
+		/**
+		 * Creates a new override method
+		 *
+		 * The slot will be taken from the base class and declaring_class set
+		 * accordingly.
+		 */
+		cool_method(cool_class* declaring_class, cool_method* base_method);
 
-		/** The return type of this method */
-		const cool_class& return_type() const;
+		/** Destructs this method (and possibly its slot) */
+		virtual ~cool_method();
 
-		/** A list containing the types of this method's parameters */
-		const std::vector<const cool_class*>& parameter_types() const;
+		/** This method's slot data */
+		const cool_method_slot* slot() const
+		{
+			return _slot;
+		}
 
 		/** Returns this method's LLVM function */
-		const llvm::Function* llvm_func() const;
+		llvm::Function* llvm_func()
+		{
+			return _func;
+		}
+
+		/** Returns this method's LLVM function */
+		const llvm::Function* llvm_func() const
+		{
+			return _func;
+		}
+
+		/**
+		 * The class which this method is defined in
+		 *
+		 * This is the class this particular override was defined in. It might
+		 * be different to slot.declaring_class.
+		 */
+		const cool_class* declaring_class() const
+		{
+			return _declaring_class;
+		}
 
 		/**
 		 * Creates a call instruction to call this method
 		 *
+		 * The first argument must be an instance of the declaring class of this
+		 * method's slot (ie you probably need to upcast it first). A runtime
+		 * error is generated if this argument is null.
+		 *
 		 * @param builder the IR builder to insert the call into
-		 * @param object the objet to call the method on (must be a class object)
 		 * @param args list of arguments to pass to this method
+		 * @param static_call call the method statically
 		 * @return a value representing the return value of the call
 		 */
 		virtual llvm::Value* call(
 			llvm::IRBuilder<> builder,
-			llvm::Value* object,
-			std::initializer_list<llvm::Value*> args) = 0;
-
-		/** Bakes this method */
-		virtual void bake() = 0;
-
-		/** Returns true if this method has been baked */
-		virtual bool is_baked() const = 0;
+			const std::vector<llvm::Value*>& args,
+			bool static_call = false) const;
 
 	protected:
-		cool_method(const std::string& name, const cool_class& return_type);
-		cool_method(std::string&& name, const cool_class& return_type);
+		cool_method() = default;
+		cool_method(const cool_method&) = delete;
+		cool_method& operator=(const cool_method&) = delete;
 
-		std::string _name;
-		const cool_class& _return_type;
-		std::vector<const cool_class*> _parameter_types;
+		const cool_method_slot* _slot = nullptr;
 		llvm::Function* _func = nullptr;
-	};
-
-	/**
-	 * A method which is called using a vtable
-	 *
-	 * The majority of methods fall under this class.
-	 * The main exception are the string method which are called directly.
-	 */
-	class cool_vtable_method : public cool_method
-	{
-	public:
-		// See cool_method for docs
-		virtual llvm::Value* call(
-			llvm::IRBuilder<> builder,
-			llvm::Value* object,
-			std::initializer_list<llvm::Value*> args) override;
-
-	protected:
-		cool_vtable_method(const std::string& name, const cool_class& return_type);
-		cool_vtable_method(std::string&& name, const cool_class& return_type);
-
-		// The location of the function pointer for this method
-		llvm::StructType* _vtable_type = nullptr;
-		int _vtable_index = 0;
-	};
-
-	/** A user-defined method */
-	class cool_user_method : public cool_vtable_method
-	{
-	public:
-		/** Creates a new user-defined method */
-		cool_user_method(const std::string& name, const cool_class& return_type);
-		cool_user_method(std::string&& name, const cool_class& return_type);
-
-		/**
-		 * Adds a parameter to this method's list of parameters
-		 *
-		 * It is illegal to call this method after this method is baked
-		 */
-		void add_parameter(const cool_class& type);
-
-		/** Returns this method's LLVM function */
-		llvm::Function* llvm_func();
-
-		// See cool_method for docs
-		virtual void bake() override;
-		virtual bool is_baked() const override;
+		const cool_class* _declaring_class = nullptr;
 	};
 
 	/** Contains the LLVM structure of a cool class */
@@ -213,14 +163,25 @@ namespace lcool
 	{
 	public:
 		cool_class(const std::string& name, const cool_class* parent);
-		cool_class(std::string&& name, const cool_class* parent);
 		virtual ~cool_class() = default;
 
 		/** Returns the name of this class */
-		const std::string& name() const;
+		const std::string& name() const
+		{
+			return _name;
+		}
 
 		/** Returns the parent of this class or NULL if this is the Object class */
-		const cool_class* parent() const;
+		const cool_class* parent() const
+		{
+			return _parent;
+		}
+
+		/** Returns true if this class is a subclass of some other class */
+		bool is_subclass_of(const cool_class* other) const;
+
+		/** Returns true if this class is final (can't be inherited from) */
+		virtual bool is_final() const;
 
 		/**
 		 * Lookup an attribute by its name
@@ -235,48 +196,69 @@ namespace lcool
 		 * @param recursive search parent classes in addition to this class
 		 * @return a pointer to the method or NULL if the method does not exist
 		 */
-		cool_method* lookup_method(const std::string& name);
 		const cool_method* lookup_method(const std::string& name, bool recursive = false) const;
 
 		/**
-		 * Inserts an attribute into the class
+		 * Returns the LLVM type used for this class
 		 *
-		 * It is illegal to call this method after this class is baked
+		 * This is usually a StructType, except for Int and Bool where it is
+		 * an IntegerType. The boxed Int and Bool struct types are not
+		 * accessible (they should be treated as "opaque").
 		 */
-		bool insert_attribute(unique_ptr<cool_attribute> attribute);
-
-		/**
-		 * Inserts a method into the class
-		 *
-		 * It is illegal to call this method after this class is baked
-		 */
-		bool insert_method(unique_ptr<cool_method> method);
-
-		/**
-		 * Returns the LLVM structure used for this class
-		 *
-		 * It is illegal to call this method before the class has been baked.
-		 */
-		const llvm::StructType& llvm_type() const;
+		const llvm::Type* llvm_type() const
+		{
+			return _llvm_type;
+		}
 
 		/**
 		 * Returns the LLVM vtable object used for this class
 		 *
-		 * It is illegal to call this method before the class has been baked.
+		 * This is null for Int and Bool - if you want to call any methods on
+		 * them, you need to upcast first.
 		 */
-		const llvm::GlobalVariable& llvm_vtable() const;
+		const llvm::GlobalVariable* llvm_vtable() const
+		{
+			return _vtable;
+		}
 
 		/**
-		 * Bakes this class
+		 * Creates an instance of this object
 		 *
-		 * Baking the class finalizes the LLVM structures preparing for code generation.
-		 * After this method has been called no structural modifications to this class are not allowed.
-		 * Calling this method multiple times has no effect.
+		 * All attributes will be initialized to their default values.
+		 * For Int and Bool, this returns (i32 0) or (i1 0) respectively.
+		 * For String, returns the empty string.
 		 */
-		virtual void bake() = 0;
+		virtual llvm::Value* create_object(llvm::IRBuilder<> builder) const;
 
-		/** Returns true if this class has been baked */
-		virtual bool is_baked() const = 0;
+		/**
+		 * Upcasts an object of this class's type to one of it's parent types
+		 *
+		 * For Int and Bool, upcasting to Object will box the value.
+		 */
+		virtual llvm::Value* upcast_to(llvm::IRBuilder<> builder, llvm::Value* value, const cool_class* to) const;
+
+		/**
+		 * Helper method to upcast to Object
+		 */
+		llvm::Value* upcast_to_object(llvm::IRBuilder<> builder, llvm::Value* value) const;
+
+		/**
+		 * Statically downcasts a value to this class's type.
+		 *
+		 * This is a bitcast, so you must be sure the value is of this class's type!
+		 * For Int and Bool, this will unbox the value.
+		 */
+		virtual llvm::Value* downcast(llvm::IRBuilder<> builder, llvm::Value* value) const;
+
+		/**
+		 * Increment the refcount on an object
+		 */
+		virtual void refcount_inc(llvm::IRBuilder<> builder, llvm::Value* value) const;
+
+		/**
+		 * Decrement the refcount on an object (and possibly free it)
+		 */
+		virtual void refcount_dec(llvm::IRBuilder<> builder, llvm::Value* value) const;
 
 	protected:
 		std::string _name;
@@ -284,8 +266,9 @@ namespace lcool
 		std::map<std::string, unique_ptr<cool_attribute>> _attributes;
 		std::map<std::string, unique_ptr<cool_method>> _methods;
 
-		llvm::StructType* _llvm_type = nullptr;
+		llvm::Type* _llvm_type = nullptr;
 		llvm::GlobalVariable* _vtable = nullptr;
+		llvm::Function* _constructor = nullptr;
 	};
 
 	/** A user-defined class */
@@ -296,9 +279,11 @@ namespace lcool
 		cool_user_class(const std::string& name, const cool_class* parent);
 		cool_user_class(std::string&& name, const cool_class* parent);
 
-		// See cool_class for docs
-		virtual void bake() override;
-		virtual bool is_baked() const override;
+		/** Inserts an attribute into the class */
+		bool insert_attribute(unique_ptr<cool_attribute> attribute);
+
+		/** Inserts a method into the class */
+		bool insert_method(unique_ptr<cool_method> method);
 	};
 
 	/**
@@ -314,14 +299,20 @@ namespace lcool
 		explicit cool_program(llvm::LLVMContext& context);
 
 		/** Returns this program's LLVM module */
-		llvm::Module& module();
-		const llvm::Module& module() const;
+		llvm::Module* module()
+		{
+			return &_module;
+		}
+
+		const llvm::Module* module() const
+		{
+			return &_module;
+		}
 
 		/**
 		 * Lookup a class by its name
 		 * @return a pointer to the class or NULL if the class does not exist
 		 */
-		cool_class* lookup_class(const std::string& name);
 		const cool_class* lookup_class(const std::string& name) const;
 
 		/**
@@ -334,19 +325,18 @@ namespace lcool
 		cool_class* insert_class(unique_ptr<cool_class> cls);
 
 		/**
-		 * Bakes this program and all the classes
+		 * Constructs and inserts a class into the program
 		 *
-		 * Baking the program finalizes the LLVM structures in preparation for code generation.
-		 * After this method has been called no structural modifications to this program or any of
-		 * the classes are allowed. Calling this method multiple times has no effect.
+		 * @return a pointer to the inserted class or NULL if a class with that name already exists
+		 * @see insert_class(unique_ptr<cool_class>)
 		 */
-		void bake();
-
-		/** Returns true if this program has been baked */
-		bool is_baked() const;
+		template <typename T, typename... Params>
+		T* insert_class(Params... params)
+		{
+			return static_cast<T*>(insert_class(make_unique<T>(params...)));
+		}
 
 	private:
-		bool _baked;
 		std::map<std::string, unique_ptr<cool_class>> _classes;
 		llvm::Module _module;
 	};
