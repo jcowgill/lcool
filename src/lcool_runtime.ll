@@ -388,6 +388,13 @@ Decrement:
 	ret void
 }
 
+; Constructs an empty object
+define internal fastcc %Object* @Object$construct()
+{
+	%result = tail call fastcc %Object* @alloc_object(%Object$vtabletype* @Object$vtable)
+	ret %Object* %result
+}
+
 ; Destroy the given object
 define internal fastcc void @Object$destroy(%Object* %this)
 {
@@ -430,6 +437,15 @@ define internal fastcc %String* @Object.type_name(%Object* %this)
 
 	; Return final string
 	ret %String* %type_name
+}
+
+; Constructs an IO object
+define internal fastcc %IO* @IO$construct()
+{
+	; IO has no variables to initialize, so we just defer to Object$construct
+	%result_obj = tail call fastcc %Object* @Object$construct()
+	%result = bitcast %Object* %result_obj to %IO*
+	ret %IO* %result
 }
 
 ; Prints a string (returns self)
@@ -551,6 +567,33 @@ define internal fastcc %Object* @Bool$box(i1 %value)
 	store i1 %value, i1* %value_ptr
 
 	ret %Object* %new
+}
+
+; Unboxes an integer
+define internal fastcc i32 @Int$unbox(%Object* %value) inlinehint
+{
+	; Load directly from object
+	%value_as_int_ptr = bitcast %Object* %value to %Int*
+	%value_ptr = getelementptr %Int* %value_as_int_ptr, i32 0, i32 1
+	%result = load i32* %value_ptr
+	ret i32 %result
+}
+
+; Unboxes a boolean
+define internal fastcc i1 @Bool$unbox(%Object* %value) inlinehint
+{
+	; Load directly from object
+	%value_as_bool_ptr = bitcast %Object* %value to %Bool*
+	%value_ptr = getelementptr %Bool* %value_as_bool_ptr, i32 0, i32 1
+	%result = load i1* %value_ptr
+	ret i1 %result
+}
+
+; Constructs a string object
+;  Since strings are immutable, this just returns the empty string
+define internal fastcc %String* @String$construct()
+{
+	ret %String* @String$empty
 }
 
 ; Returns the string's length
