@@ -21,8 +21,8 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
-#include <map>
 #include <string>
+#include <unordered_map>
 
 #include "smart_ptr.hpp"
 
@@ -263,8 +263,8 @@ namespace lcool
 	protected:
 		std::string _name;
 		const cool_class* _parent = nullptr;
-		std::map<std::string, unique_ptr<cool_attribute>> _attributes;
-		std::map<std::string, unique_ptr<cool_method>> _methods;
+		std::unordered_map<std::string, unique_ptr<cool_attribute>> _attributes;
+		std::unordered_map<std::string, unique_ptr<cool_method>> _methods;
 
 		llvm::Type* _llvm_type = nullptr;
 		llvm::GlobalVariable* _vtable = nullptr;
@@ -337,7 +337,7 @@ namespace lcool
 		}
 
 	private:
-		std::map<std::string, unique_ptr<cool_class>> _classes;
+		std::unordered_map<std::string, unique_ptr<cool_class>> _classes;
 		llvm::Module _module;
 	};
 }
