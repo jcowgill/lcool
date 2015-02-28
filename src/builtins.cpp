@@ -16,7 +16,7 @@
  */
 
 #include <llvm/Bitcode/ReaderWriter.h>
-#include <llvm/Linker/Linker.h>
+#include <llvm/Linker.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <cassert>
 #include <cstdlib>
@@ -176,10 +176,10 @@ static void link_runtime(llvm::Module* dest)
 	// Parse bitcode_data to get an LLVM module
 	llvm::StringRef bitcode_data_ref(reinterpret_cast<const char*>(bitcode_data), sizeof(bitcode_data));
 	unique_ptr<llvm::MemoryBuffer> buf(llvm::MemoryBuffer::getMemBuffer(bitcode_data_ref, "", false));
-	llvm::ErrorOr<llvm::Module*> src = llvm::parseBitcodeFile(buf.get(), dest->getContext());
+	llvm::Module* src = llvm::ParseBitcodeFile(buf.get(), dest->getContext());
 
 	// Link module into main program
-	if (!src || llvm::Linker::LinkModules(dest, *src, llvm::Linker::DestroySource, nullptr))
+	if (!src || llvm::Linker::LinkModules(dest, src, llvm::Linker::DestroySource, nullptr))
 	{
 		// Failed to link runtime (should never happen)
 		std::cerr << "fatal error: failed to load lcool runtime bitcode file" << std::endl;
