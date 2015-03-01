@@ -18,6 +18,9 @@
 #include <iostream>
 
 #include "ast.hpp"
+#include "builtins.hpp"
+#include "cool_program.hpp"
+#include "layout.hpp"
 #include "logger.hpp"
 #include "parser.hpp"
 
@@ -30,6 +33,21 @@ int main()
 	if (log.has_errors())
 		return 1;
 
+	// Dump AST
 	lcool::dump_ast(std::cout, program);
+
+	// Create empty cool_program
+	llvm::LLVMContext llvm_context;
+	lcool::cool_program output(llvm_context);
+
+	// Link in builtin classes
+	lcool::load_builtins(output);
+
+	// Layout program
+	lcool::layout(program, output, log);
+
+	if (log.has_errors())
+		return 1;
+
 	return 0;
 }
