@@ -44,6 +44,7 @@ add_executable(lcoolc
 
 # Assemble builtins file
 add_custom_command(OUTPUT "${BIN_DIR}/lcool_runtime.bc"
+	DEPENDS "${SRC_DIR}/lcool_runtime.ll"
 	COMMAND ${LLVM_BIN_DIR}/llvm-as -o "${BIN_DIR}/lcool_runtime.bc" "${SRC_DIR}/lcool_runtime.ll"
 	VERBATIM
 )
