@@ -227,6 +227,15 @@ lcool::cool_program::cool_program(llvm::LLVMContext& context)
 {
 }
 
+cool_class* lcool::cool_program::lookup_class(const std::string& name)
+{
+	auto iter = _classes.find(name);
+	if (iter != _classes.end())
+		return iter->second.get();
+
+	return nullptr;
+}
+
 const cool_class* lcool::cool_program::lookup_class(const std::string& name) const
 {
 	auto iter = _classes.find(name);

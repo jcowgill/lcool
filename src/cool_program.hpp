@@ -313,6 +313,12 @@ namespace lcool
 		 * Lookup a class by its name
 		 * @return a pointer to the class or NULL if the class does not exist
 		 */
+		cool_class* lookup_class(const std::string& name);
+
+		/**
+		 * Lookup a class by its name
+		 * @return a pointer to the class or NULL if the class does not exist
+		 */
 		const cool_class* lookup_class(const std::string& name) const;
 
 		/**
