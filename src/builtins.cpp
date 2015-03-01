@@ -217,6 +217,7 @@ void lcool::load_builtins(lcool::cool_program& program)
 	cls_io->add_method("out_int",    cls_io, 3, { cls_int });
 	cls_io->add_method("out_string", cls_io, 4, { cls_string });
 
+	cls_string->set_final();
 	cls_string->add_static_method("length", cls_int);
 	cls_string->add_static_method("concat", cls_string, { cls_string });
 	cls_string->add_static_method("substr", cls_string, { cls_int, cls_int });
