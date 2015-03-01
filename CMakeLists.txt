@@ -31,6 +31,8 @@ add_executable(lcoolc
 	"${SRC_DIR}/cool_program.cpp"
 	"${SRC_DIR}/cool_program.hpp"
 	"${BIN_DIR}/lcool_runtime.inc"
+	"${SRC_DIR}/layout.cpp"
+	"${SRC_DIR}/layout.hpp"
 	"${SRC_DIR}/lexer.cpp"
 	"${SRC_DIR}/lexer.hpp"
 	"${SRC_DIR}/logger.cpp"
