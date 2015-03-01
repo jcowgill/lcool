@@ -179,7 +179,7 @@ static void link_runtime(llvm::Module* dest)
 	llvm::ErrorOr<llvm::Module*> src = llvm::parseBitcodeFile(buf.get(), dest->getContext());
 
 	// Link module into main program
-	if (!src || !llvm::Linker::LinkModules(dest, *src, llvm::Linker::DestroySource, nullptr))
+	if (!src || llvm::Linker::LinkModules(dest, *src, llvm::Linker::DestroySource, nullptr))
 	{
 		// Failed to link runtime (should never happen)
 		std::cerr << "fatal error: failed to load lcool runtime bitcode file" << std::endl;
