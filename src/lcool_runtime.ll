@@ -122,7 +122,7 @@
 	{ %Object { %Object$vtabletype* @String$vtable, i32 1 }, i32 4, [4 x i8] c"Bool" }
 
 ; vtable instances
-@Object$vtable = internal constant %Object$vtabletype
+@Object$vtable = hidden constant %Object$vtabletype
 {
 	%Object$vtabletype*  null,
 	i32                  ptrtoint (%Object* getelementptr (%Object* null, i32 1) to i32),
@@ -133,7 +133,7 @@
 	%String* (%Object*)* @Object.type_name
 }
 
-@IO$vtable = internal constant %IO$vtabletype
+@IO$vtable = hidden constant %IO$vtabletype
 {
 	%Object$vtabletype
 	{
@@ -152,7 +152,7 @@
 	%IO* (%IO*, %String*)* @IO.out_string
 }
 
-@String$vtable = internal constant %Object$vtabletype
+@String$vtable = hidden constant %Object$vtabletype
 {
 	%Object$vtabletype*  @Object$vtable,
 	i32                  ptrtoint (%String* getelementptr (%String* null, i32 1) to i32),
@@ -163,7 +163,7 @@
 	%String* (%Object*)* @Object.type_name
 }
 
-@Int$vtable = internal constant %Object$vtabletype
+@Int$vtable = hidden constant %Object$vtabletype
 {
 	%Object$vtabletype*  @Object$vtable,
 	i32                  ptrtoint (%Int* getelementptr (%Int* null, i32 1) to i32),
@@ -174,7 +174,7 @@
 	%String* (%Object*)* @Object.type_name
 }
 
-@Bool$vtable = internal constant %Object$vtabletype
+@Bool$vtable = hidden constant %Object$vtabletype
 {
 	%Object$vtabletype*  @Object$vtable,
 	i32                  ptrtoint (%Bool* getelementptr (%Bool* null, i32 1) to i32),
@@ -186,7 +186,7 @@
 }
 
 ; The empty string
-@String$empty = internal global %String
+@String$empty = hidden global %String
 {
 	%Object { %Object$vtabletype* @String$vtable, i32 1 },
 	i32 0,
@@ -226,7 +226,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
 ; Builtin method implementations
 
 ; Prints a message and calls abort
-define internal fastcc void @abort_with_msg(i8* %msg) noreturn
+define hidden fastcc void @abort_with_msg(i8* %msg) noreturn
 {
 	call i32 @puts(i8* %msg)
 	%stdout = load %IO$File** @stdout
@@ -236,7 +236,7 @@ define internal fastcc void @abort_with_msg(i8* %msg) noreturn
 }
 
 ; Allocates space for an object and sets its vtable pointer
-define internal fastcc %Object* @alloc_object(%Object$vtabletype* %vtable)
+define hidden fastcc %Object* @alloc_object(%Object$vtabletype* %vtable)
 {
 	; Get size and call alloc_object_with_size
 	%size_ptr = getelementptr %Object$vtabletype* %vtable, i32 0, i32 1
@@ -247,7 +247,7 @@ define internal fastcc %Object* @alloc_object(%Object$vtabletype* %vtable)
 }
 
 ; Like alloc_object but size is manually specified
-define internal fastcc %Object* @alloc_object_with_size(i32 %size, %Object$vtabletype* %vtable)
+define hidden fastcc %Object* @alloc_object_with_size(i32 %size, %Object$vtabletype* %vtable)
 {
 	; Allocate space for object
 	%ptr = call i8* @malloc(i32 %size)
@@ -275,7 +275,7 @@ Null:
 }
 
 ; Allocate a string (uninitialized)
-define internal fastcc %String* @alloc_string(i32 %size)
+define hidden fastcc %String* @alloc_string(i32 %size)
 {
 	; If size is 0, just return the empty string
 	%is_empty = icmp eq i32 %size, 0
@@ -303,14 +303,14 @@ Empty:
 }
 
 ; Fast version of copy for immutable objects
-define internal fastcc %Object* @copy_noop(%Object* %this)
+define hidden fastcc %Object* @copy_noop(%Object* %this)
 {
 	call fastcc void @refcount_inc(%Object* %this)
 	ret %Object* %this
 }
 
 ; Determines if an object is an instance of the given class (or a subclass)
-define internal fastcc i1 @instance_of(%Object* %this, %Object$vtabletype* %cls) readonly
+define hidden fastcc i1 @instance_of(%Object* %this, %Object$vtabletype* %cls) readonly
 {
 	; Get object vtable
 	%vtable1ptr = getelementptr %Object* %this, i32 0, i32 0
@@ -340,7 +340,7 @@ NoInstance:
 }
 
 ; Verifys that the given argument is not null
-define internal fastcc void @null_check(%Object* %this) inlinehint
+define hidden fastcc void @null_check(%Object* %this) inlinehint
 {
 	%is_null = icmp eq %Object* %this, null
 	br i1 %is_null, label %Null, label %NotNull
@@ -354,7 +354,7 @@ Null:
 }
 
 ; Increments the refcount on an object
-define internal fastcc void @refcount_inc(%Object* %this) inlinehint
+define hidden fastcc void @refcount_inc(%Object* %this) inlinehint
 {
 	%refcount_ptr = getelementptr %Object* %this, i32 0, i32 1
 	%refcount_old = load i32* %refcount_ptr
@@ -364,7 +364,7 @@ define internal fastcc void @refcount_inc(%Object* %this) inlinehint
 }
 
 ; Decrements the refcount on an object
-define internal fastcc void @refcount_dec(%Object* %this) inlinehint
+define hidden fastcc void @refcount_dec(%Object* %this) inlinehint
 {
 	; Get refcount and see if we should destroy it
 	%refcount_ptr = getelementptr %Object* %this, i32 0, i32 1
@@ -389,14 +389,14 @@ Decrement:
 }
 
 ; Constructs an empty object
-define internal fastcc %Object* @Object$construct()
+define hidden fastcc %Object* @Object$construct()
 {
 	%result = tail call fastcc %Object* @alloc_object(%Object$vtabletype* @Object$vtable)
 	ret %Object* %result
 }
 
 ; Destroy the given object
-define internal fastcc void @Object$destroy(%Object* %this)
+define hidden fastcc void @Object$destroy(%Object* %this)
 {
 	%this_as_i8 = bitcast %Object* %this to i8*
 	call void @free(i8* %this_as_i8)
@@ -404,14 +404,14 @@ define internal fastcc void @Object$destroy(%Object* %this)
 }
 
 ; Prints an error message and calls abort()
-define internal fastcc %Object* @Object.abort(%Object* %this) noreturn
+define hidden fastcc %Object* @Object.abort(%Object* %this) noreturn
 {
 	call fastcc void @abort_with_msg(i8* getelementptr ([22 x i8]* @err_abort, i32 0, i32 0))
 	unreachable
 }
 
 ; Copies the given object
-define internal fastcc %Object* @Object.copy(%Object* %this)
+define hidden fastcc %Object* @Object.copy(%Object* %this)
 {
 	; Allocate new object with same size as %this and return it
 	%vtable_ptr = getelementptr %Object* %this, i32 0, i32 0
@@ -422,7 +422,7 @@ define internal fastcc %Object* @Object.copy(%Object* %this)
 }
 
 ; Returns the name of the type of an object
-define internal fastcc %String* @Object.type_name(%Object* %this)
+define hidden fastcc %String* @Object.type_name(%Object* %this)
 {
 	; Extract type_name from vtable
 	%vtable_ptr = getelementptr %Object* %this, i32 0, i32 0
@@ -440,7 +440,7 @@ define internal fastcc %String* @Object.type_name(%Object* %this)
 }
 
 ; Constructs an IO object
-define internal fastcc %IO* @IO$construct()
+define hidden fastcc %IO* @IO$construct()
 {
 	; IO has no variables to initialize, so we just defer to Object$construct
 	%result_obj = tail call fastcc %Object* @Object$construct()
@@ -449,7 +449,7 @@ define internal fastcc %IO* @IO$construct()
 }
 
 ; Prints a string (returns self)
-define internal fastcc %IO* @IO.out_string(%IO* %this, %String* %value)
+define hidden fastcc %IO* @IO.out_string(%IO* %this, %String* %value)
 {
 	; Get string length and data pointer
 	%str_len = call fastcc i32 @String.length(%String* %value)
@@ -466,7 +466,7 @@ define internal fastcc %IO* @IO.out_string(%IO* %this, %String* %value)
 }
 
 ; Prints an integer (returns self)
-define internal fastcc %IO* @IO.out_int(%IO* %this, i32 %value)
+define hidden fastcc %IO* @IO.out_int(%IO* %this, i32 %value)
 {
 	; Call printf
 	%format = getelementptr [3 x i8]* @format_int, i32 0, i32 0
@@ -479,7 +479,7 @@ define internal fastcc %IO* @IO.out_int(%IO* %this, i32 %value)
 }
 
 ; Reads one line of input (does not read new line character)
-define internal fastcc %String* @IO.in_string(%IO* %this)
+define hidden fastcc %String* @IO.in_string(%IO* %this)
 {
 	%buf = alloca i8, i32 4096
 
@@ -520,7 +520,7 @@ Eof:
 }
 
 ; Reads one line of input and parses it as an integer
-define internal fastcc i32 @IO.in_int(%IO* %this)
+define hidden fastcc i32 @IO.in_int(%IO* %this)
 {
 	%buf = alloca i8, i32 4096
 
@@ -542,7 +542,7 @@ Eof:
 }
 
 ; Boxes an integer into an object
-define internal fastcc %Object* @Int$box(i32 %value)
+define hidden fastcc %Object* @Int$box(i32 %value)
 {
 	; Allocate integer object
 	%new = call fastcc %Object* @alloc_object(%Object$vtabletype* @Int$vtable)
@@ -556,7 +556,7 @@ define internal fastcc %Object* @Int$box(i32 %value)
 }
 
 ; Boxes a boolean into an object
-define internal fastcc %Object* @Bool$box(i1 %value)
+define hidden fastcc %Object* @Bool$box(i1 %value)
 {
 	; Allocate boolean object
 	%new = call fastcc %Object* @alloc_object(%Object$vtabletype* @Bool$vtable)
@@ -570,7 +570,7 @@ define internal fastcc %Object* @Bool$box(i1 %value)
 }
 
 ; Unboxes an integer
-define internal fastcc i32 @Int$unbox(%Object* %value) inlinehint
+define hidden fastcc i32 @Int$unbox(%Object* %value) inlinehint
 {
 	; Load directly from object
 	%value_as_int_ptr = bitcast %Object* %value to %Int*
@@ -580,7 +580,7 @@ define internal fastcc i32 @Int$unbox(%Object* %value) inlinehint
 }
 
 ; Unboxes a boolean
-define internal fastcc i1 @Bool$unbox(%Object* %value) inlinehint
+define hidden fastcc i1 @Bool$unbox(%Object* %value) inlinehint
 {
 	; Load directly from object
 	%value_as_bool_ptr = bitcast %Object* %value to %Bool*
@@ -591,13 +591,13 @@ define internal fastcc i1 @Bool$unbox(%Object* %value) inlinehint
 
 ; Constructs a string object
 ;  Since strings are immutable, this just returns the empty string
-define internal fastcc %String* @String$construct()
+define hidden fastcc %String* @String$construct()
 {
 	ret %String* @String$empty
 }
 
 ; Returns the string's length
-define internal fastcc i32 @String.length(%String* %this) inlinehint
+define hidden fastcc i32 @String.length(%String* %this) inlinehint
 {
 	; Test for null string
 	;  This is done for strings since this method is called statically
@@ -615,7 +615,7 @@ Null:
 }
 
 ; Concatenates two strings
-define internal fastcc %String* @String.concat(%String* %this, %String* %other)
+define hidden fastcc %String* @String.concat(%String* %this, %String* %other)
 {
 	; Test if any inputs are null
 	%this_is_null  = icmp eq %String* %this, null
@@ -652,7 +652,7 @@ Null:
 }
 
 ; Extracts a substring of this string
-define internal fastcc %String* @String.substr(%String* %this, i32 %i, i32 %l)
+define hidden fastcc %String* @String.substr(%String* %this, i32 %i, i32 %l)
 {
 	; Test for null string
 	%is_null = icmp eq %String* %this, null
