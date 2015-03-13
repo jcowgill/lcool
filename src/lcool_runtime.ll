@@ -217,10 +217,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
 @format_int = private unnamed_addr constant [3 x i8] c"%d\00"
 @err_oom = private unnamed_addr constant [14 x i8] c"Out of memory\00"
 @err_abort = private unnamed_addr constant [22 x i8] c"Object.abort() called\00"
-@err_null_strlen = private unnamed_addr constant [38 x i8] c"String.length() called on void string\00"
-@err_null_strcat = private unnamed_addr constant [38 x i8] c"String.concat() called on void string\00"
-@err_null_strsub = private unnamed_addr constant [38 x i8] c"String.substr() called on void string\00"
-@err_null_generic = private unnamed_addr constant [27 x i8] c"Illegal use of void object\00"
+@err_null = private unnamed_addr constant [27 x i8] c"Illegal use of void object\00"
 @err_range = private unnamed_addr constant [35 x i8] c"Bad range for String.substr() call\00"
 
 ; Builtin method implementations
@@ -349,7 +346,7 @@ NotNull:
 	ret void
 
 Null:
-	call fastcc void @abort_with_msg(i8* getelementptr ([27 x i8]* @err_null_generic, i32 0, i32 0))
+	call fastcc void @abort_with_msg(i8* getelementptr ([27 x i8]* @err_null, i32 0, i32 0))
 	unreachable
 }
 
@@ -600,30 +597,24 @@ define hidden fastcc %String* @String$construct()
 define hidden fastcc i32 @String.length(%String* %this) inlinehint
 {
 	; Test for null string
-	;  This is done for strings since this method is called statically
-	%is_null = icmp eq %String* %this, null
-	br i1 %is_null, label %Null, label %NotNull
+	%this_as_object = getelementptr %String* %this, i32 0, i32 0
+	call fastcc void @null_check(%Object* %this_as_object)
 
-NotNull:
+	; Return length
 	%length_ptr = getelementptr %String* %this, i32 0, i32 1
 	%length = load i32* %length_ptr
 	ret i32 %length
-
-Null:
-	call fastcc void @abort_with_msg(i8* getelementptr ([38 x i8]* @err_null_strlen, i32 0, i32 0))
-	unreachable
 }
 
 ; Concatenates two strings
 define hidden fastcc %String* @String.concat(%String* %this, %String* %other)
 {
 	; Test if any inputs are null
-	%this_is_null  = icmp eq %String* %this, null
-	%other_is_null = icmp eq %String* %other, null
-	%any_are_null  = or i1 %this_is_null, %other_is_null
-	br i1 %any_are_null, label %Null, label %NotNull
+	%this_as_object = getelementptr %String* %this, i32 0, i32 0
+	call fastcc void @null_check(%Object* %this_as_object)
+	%other_as_object = getelementptr %String* %other, i32 0, i32 0
+	call fastcc void @null_check(%Object* %other_as_object)
 
-NotNull:
 	; Get length of new string
 	%this_len_ptr = getelementptr %String* %this, i32 0, i32 1
 	%this_len = load i32* %this_len_ptr
@@ -645,20 +636,15 @@ NotNull:
 	call void @llvm.memcpy.p0i8.p0i8.i32(i8* %new_data_ptr2, i8* %other_data_ptr, i32 %other_len, i32 0, i1 0)
 
 	ret %String* %new
-
-Null:
-	call fastcc void @abort_with_msg(i8* getelementptr ([38 x i8]* @err_null_strcat, i32 0, i32 0))
-	unreachable
 }
 
 ; Extracts a substring of this string
 define hidden fastcc %String* @String.substr(%String* %this, i32 %i, i32 %l)
 {
 	; Test for null string
-	%is_null = icmp eq %String* %this, null
-	br i1 %is_null, label %Null, label %NotNull
+	%this_as_object = getelementptr %String* %this, i32 0, i32 0
+	call fastcc void @null_check(%Object* %this_as_object)
 
-NotNull:
 	; Get original string length
 	%this_len_ptr = getelementptr %String* %this, i32 0, i32 1
 	%this_len = load i32* %this_len_ptr
@@ -696,10 +682,6 @@ Empty:
 	%empty_object = getelementptr %String* @String$empty, i32 0, i32 0
 	call fastcc void @refcount_inc(%Object* %empty_object)
 	ret %String* @String$empty
-
-Null:
-	call fastcc void @abort_with_msg(i8* getelementptr ([38 x i8]* @err_null_strsub, i32 0, i32 0))
-	unreachable
 
 RangeError:
 	call fastcc void @abort_with_msg(i8* getelementptr ([35 x i8]* @err_range, i32 0, i32 0))
