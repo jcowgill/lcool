@@ -52,11 +52,6 @@ namespace
 			assert(_vtable != nullptr);
 		}
 
-		virtual bool is_final() const override
-		{
-			return _final;
-		}
-
 		/**
 		 * Creates a new vtable method using a new vtable slot
 		 *
@@ -87,18 +82,34 @@ namespace
 			const cool_class* return_type,
 			std::initializer_list<const cool_class*> param_types = {})
 		{
-			assert(_final);
 			add_method(name, return_type, -1, param_types);
 		}
 
-		void set_final()
+	protected:
+		llvm::Module* _module;
+	};
+
+	// String have some slight adjustments to optimize things a bit
+	class builtin_string_class : public builtin_ref_class
+	{
+	public:
+		builtin_string_class(llvm::Module* module, const std::string& name, cool_class* parent)
+			: builtin_ref_class(module, name, parent)
 		{
-			_final = true;
 		}
 
-	private:
-		llvm::Module* _module;
-		bool _final = false;
+		virtual bool is_final() const override
+		{
+			return true;
+		}
+
+		virtual llvm::Value* create_object(llvm::IRBuilder<> builder) const
+		{
+			// Return the global empty string (after incrementing its refcount)
+			auto empty_str = _module->getGlobalVariable("String$empty");
+			refcount_inc(builder, empty_str);
+			return empty_str;
+		}
 	};
 
 	/** Builtin value class (Int and Bool) */
@@ -198,11 +209,11 @@ void lcool::load_builtins(lcool::cool_program& program)
 
 	auto cls_object = program.insert_class<builtin_ref_class>(module, "Object", nullptr);
 	auto cls_io     = program.insert_class<builtin_ref_class>(module, "IO", cls_object);
-	auto cls_string = program.insert_class<builtin_ref_class>(module, "String", cls_object);
+	auto cls_string = program.insert_class<builtin_string_class>(module, "String", cls_object);
 	auto cls_bool   = program.insert_class<builtin_value_class>(module, "Bool", cls_object, int1);
 	auto cls_int    = program.insert_class<builtin_value_class>(module, "Int", cls_object, int32);
 
-	assert(cls_object && cls_io && cls_string  && cls_int && cls_bool);
+	assert(cls_object && cls_io && cls_string && cls_int && cls_bool);
 
 #warning TODO Handle SELF_TYPE
 	// Register methods
@@ -215,7 +226,6 @@ void lcool::load_builtins(lcool::cool_program& program)
 	cls_io->add_method("out_int",    cls_io, 3, { cls_int });
 	cls_io->add_method("out_string", cls_io, 4, { cls_string });
 
-	cls_string->set_final();
 	cls_string->add_static_method("length", cls_int);
 	cls_string->add_static_method("concat", cls_string, { cls_string });
 	cls_string->add_static_method("substr", cls_string, { cls_int, cls_int });
