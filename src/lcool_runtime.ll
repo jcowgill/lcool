@@ -221,6 +221,7 @@ declare i32 @strlen(i8*) nounwind
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
 
+@stderr = external global %IO$File*
 @stdout = external global %IO$File*
 @stdin = external global %IO$File*
 
@@ -238,8 +239,8 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
 define hidden fastcc void @abort_with_msg(i8* %msg) noreturn
 {
 	call i32 @puts(i8* %msg)
-	%stdout = load %IO$File** @stdout
-	call i32 @fflush(%IO$File* %stdout)
+	%stderr = load %IO$File** @stderr
+	call i32 @fflush(%IO$File* %stderr)
 	call void @abort()
 	unreachable
 }
