@@ -268,7 +268,6 @@ namespace lcool
 
 		llvm::Type* _llvm_type = nullptr;
 		llvm::GlobalVariable* _vtable = nullptr;
-		llvm::Function* _constructor = nullptr;
 	};
 
 	/** A user-defined class */

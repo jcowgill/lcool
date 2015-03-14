@@ -47,11 +47,9 @@ namespace
 			// Add LLVM objects
 			_llvm_type = module->getTypeByName(name);
 			_vtable = module->getNamedGlobal(name + "$vtable");
-			_constructor = module->getFunction(name + "$construct");
 
 			assert(_llvm_type != nullptr);
 			assert(_vtable != nullptr);
-			assert(_constructor != nullptr);
 		}
 
 		virtual bool is_final() const override

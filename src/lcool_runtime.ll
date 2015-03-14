@@ -48,8 +48,8 @@
 ; ====================
 ; (all Object and IO functions are called through a vtable)
 ;
-; alloc_object
 ; instance_of
+; new_object
 ; null_check
 ; refcount_inc
 ; refcount_dec
@@ -64,13 +64,15 @@
 ; Object structures
 %Object$vtabletype = type
 {
-	%Object$vtabletype*,  ; Pointer to parent vtable (null for Object)
-	i32,                  ; Object size
-	%String*,             ; Pointer to type_name of this class
-	void (%Object*)*,     ; Destructor
-	%Object* (%Object*)*, ; abort
-	%Object* (%Object*)*, ; copy
-	%String* (%Object*)*  ; type_name
+	%Object$vtabletype*,       ; Pointer to parent vtable (null for Object)
+	i32,                       ; Object size
+	%String*,                  ; Pointer to type_name of this class
+	void (%Object*)*,          ; Constructor
+	void (%Object*, %Object*)*,; Copy constructor
+	void (%Object*)*,          ; Destructor
+	%Object* (%Object*)*,      ; abort
+	%Object* (%Object*)*,      ; copy
+	%String* (%Object*)*       ; type_name
 }
 
 %Object = type
@@ -124,26 +126,30 @@
 ; vtable instances
 @Object$vtable = hidden constant %Object$vtabletype
 {
-	%Object$vtabletype*  null,
-	i32                  ptrtoint (%Object* getelementptr (%Object* null, i32 1) to i32),
-	%String*             bitcast ({ %Object, i32, [6 x i8] }* @Object$name to %String*),
-	void (%Object*)*     @Object$destroy,
-	%Object* (%Object*)* @Object.abort,
-	%Object* (%Object*)* @Object.copy,
-	%String* (%Object*)* @Object.type_name
+	%Object$vtabletype*        null,
+	i32                        ptrtoint (%Object* getelementptr (%Object* null, i32 1) to i32),
+	%String*                   bitcast ({ %Object, i32, [6 x i8] }* @Object$name to %String*),
+	void (%Object*)*           @noop_construct,
+	void (%Object*, %Object*)* @noop_copyconstruct,
+	void (%Object*)*           @Object$destroy,
+	%Object* (%Object*)*       @Object.abort,
+	%Object* (%Object*)*       @Object.copy,
+	%String* (%Object*)*       @Object.type_name
 }
 
 @IO$vtable = hidden constant %IO$vtabletype
 {
 	%Object$vtabletype
 	{
-		%Object$vtabletype*  @Object$vtable,
-		i32                  ptrtoint (%IO* getelementptr (%IO* null, i32 1) to i32),
-		%String*             bitcast ({ %Object, i32, [2 x i8] }* @IO$name to %String*),
-		void (%Object*)*     @Object$destroy,
-		%Object* (%Object*)* @Object.abort,
-		%Object* (%Object*)* @Object.copy,
-		%String* (%Object*)* @Object.type_name
+		%Object$vtabletype*        @Object$vtable,
+		i32                        ptrtoint (%IO* getelementptr (%IO* null, i32 1) to i32),
+		%String*                   bitcast ({ %Object, i32, [2 x i8] }* @IO$name to %String*),
+		void (%Object*)*           @noop_construct,
+		void (%Object*, %Object*)* @noop_copyconstruct,
+		void (%Object*)*           @Object$destroy,
+		%Object* (%Object*)*       @Object.abort,
+		%Object* (%Object*)*       @Object.copy,
+		%String* (%Object*)*       @Object.type_name
 	},
 
 	i32 (%IO*)*            @IO.in_int,
@@ -154,35 +160,41 @@
 
 @String$vtable = hidden constant %Object$vtabletype
 {
-	%Object$vtabletype*  @Object$vtable,
-	i32                  ptrtoint (%String* getelementptr (%String* null, i32 1) to i32),
-	%String*             bitcast ({ %Object, i32, [6 x i8] }* @String$name to %String*),
-	void (%Object*)*     @Object$destroy,
-	%Object* (%Object*)* @Object.abort,
-	%Object* (%Object*)* @copy_noop,
-	%String* (%Object*)* @Object.type_name
+	%Object$vtabletype*        @Object$vtable,
+	i32                        ptrtoint (%String* getelementptr (%String* null, i32 1) to i32),
+	%String*                   bitcast ({ %Object, i32, [6 x i8] }* @String$name to %String*),
+	void (%Object*)*           @noop_construct,
+	void (%Object*, %Object*)* @noop_copyconstruct,
+	void (%Object*)*           @Object$destroy,
+	%Object* (%Object*)*       @Object.abort,
+	%Object* (%Object*)*       @Object.copy,
+	%String* (%Object*)*       @Object.type_name
 }
 
 @Int$vtable = hidden constant %Object$vtabletype
 {
-	%Object$vtabletype*  @Object$vtable,
-	i32                  ptrtoint (%Int* getelementptr (%Int* null, i32 1) to i32),
-	%String*             bitcast ({ %Object, i32, [3 x i8] }* @Int$name to %String*),
-	void (%Object*)*     @Object$destroy,
-	%Object* (%Object*)* @Object.abort,
-	%Object* (%Object*)* @copy_noop,
-	%String* (%Object*)* @Object.type_name
+	%Object$vtabletype*        @Object$vtable,
+	i32                        ptrtoint (%Int* getelementptr (%Int* null, i32 1) to i32),
+	%String*                   bitcast ({ %Object, i32, [3 x i8] }* @Int$name to %String*),
+	void (%Object*)*           @noop_construct,
+	void (%Object*, %Object*)* @noop_copyconstruct,
+	void (%Object*)*           @Object$destroy,
+	%Object* (%Object*)*       @Object.abort,
+	%Object* (%Object*)*       @Object.copy,
+	%String* (%Object*)*       @Object.type_name
 }
 
 @Bool$vtable = hidden constant %Object$vtabletype
 {
-	%Object$vtabletype*  @Object$vtable,
-	i32                  ptrtoint (%Bool* getelementptr (%Bool* null, i32 1) to i32),
-	%String*             bitcast ({ %Object, i32, [4 x i8] }* @Bool$name to %String*),
-	void (%Object*)*     @Object$destroy,
-	%Object* (%Object*)* @Object.abort,
-	%Object* (%Object*)* @copy_noop,
-	%String* (%Object*)* @Object.type_name
+	%Object$vtabletype*        @Object$vtable,
+	i32                        ptrtoint (%Bool* getelementptr (%Bool* null, i32 1) to i32),
+	%String*                   bitcast ({ %Object, i32, [4 x i8] }* @Bool$name to %String*),
+	void (%Object*)*           @noop_construct,
+	void (%Object*, %Object*)* @noop_copyconstruct,
+	void (%Object*)*           @Object$destroy,
+	%Object* (%Object*)*       @Object.abort,
+	%Object* (%Object*)*       @Object.copy,
+	%String* (%Object*)*       @Object.type_name
 }
 
 ; The empty string
@@ -299,13 +311,6 @@ Empty:
 	ret %String* @String$empty
 }
 
-; Fast version of copy for immutable objects
-define hidden fastcc %Object* @copy_noop(%Object* %this)
-{
-	call fastcc void @refcount_inc(%Object* %this)
-	ret %Object* %this
-}
-
 ; Determines if an object is an instance of the given class (or a subclass)
 define hidden fastcc i1 @instance_of(%Object* %this, %Object$vtabletype* %cls) readonly
 {
@@ -334,6 +339,31 @@ GoodInstance:
 
 NoInstance:
 	ret i1 0
+}
+
+; Allocates and initializes a new object of the given type
+define hidden fastcc %Object* @new_object(%Object$vtabletype* %vtable)
+{
+	; Allocate object
+	%new = call fastcc %Object* @alloc_object(%Object$vtabletype* %vtable)
+
+	; Call constructor
+	%construct_ptr = getelementptr %Object$vtabletype* %vtable, i32 0, i32 3
+	%construct = load void (%Object*)** %construct_ptr
+	call fastcc void %construct(%Object* %new)
+	ret %Object* %new
+}
+
+; Do nothing constructor
+define hidden fastcc void @noop_construct(%Object*)
+{
+	ret void
+}
+
+; Do nothing copy constructor
+define hidden fastcc void @noop_copyconstruct(%Object*, %Object*)
+{
+	ret void
 }
 
 ; Verifys that the given argument is not null
@@ -373,7 +403,7 @@ Garbage:
 	; Call its destructor
 	%vtable_ptr = getelementptr %Object* %this, i32 0, i32 0
 	%vtable = load %Object$vtabletype** %vtable_ptr
-	%destroy_ptr = getelementptr %Object$vtabletype* %vtable, i32 0, i32 3
+	%destroy_ptr = getelementptr %Object$vtabletype* %vtable, i32 0, i32 5
 	%destroy = load void (%Object*)** %destroy_ptr
 	tail call fastcc void %destroy(%Object* %this)
 	ret void
@@ -383,13 +413,6 @@ Decrement:
 	%refcount_new = sub nuw i32 %refcount_old, 1
 	store i32 %refcount_new, i32* %refcount_ptr
 	ret void
-}
-
-; Constructs an empty object
-define hidden fastcc %Object* @Object$construct()
-{
-	%result = tail call fastcc %Object* @alloc_object(%Object$vtabletype* @Object$vtable)
-	ret %Object* %result
 }
 
 ; Destroy the given object
@@ -410,12 +433,31 @@ define hidden fastcc %Object* @Object.abort(%Object* %this) noreturn
 ; Copies the given object
 define hidden fastcc %Object* @Object.copy(%Object* %this)
 {
-	; Allocate new object with same size as %this and return it
+	; Get the vtable
 	%vtable_ptr = getelementptr %Object* %this, i32 0, i32 0
 	%vtable = load %Object$vtabletype** %vtable_ptr
 
-	%new = tail call fastcc %Object* @alloc_object(%Object$vtabletype* %vtable)
+	; Strings, Ints and Bools would require special handling but since they're
+	;  immutable, we can just return the uncopied object
+	%is_string = icmp eq %Object$vtabletype* %vtable, @String$vtable
+	%is_int = icmp eq %Object$vtabletype* %vtable, @Int$vtable
+	%is_bool = icmp eq %Object$vtabletype* %vtable, @Bool$vtable
+	%or_1 = or i1 %is_string, %is_int
+	%or_2 = or i1 %or_1, %is_bool
+	br i1 %or_2, label %RetThis, label %DoCopy
+
+DoCopy:
+	; Allocate object
+	%new = call fastcc %Object* @alloc_object(%Object$vtabletype* %vtable)
+
+	; Call copy constructor
+	%construct_ptr = getelementptr %Object$vtabletype* %vtable, i32 0, i32 4
+	%construct = load void (%Object*, %Object*)** %construct_ptr
+	call fastcc void %construct(%Object* %new, %Object* %this)
 	ret %Object* %new
+
+RetThis:
+	ret %Object* %this
 }
 
 ; Returns the name of the type of an object
@@ -434,15 +476,6 @@ define hidden fastcc %String* @Object.type_name(%Object* %this)
 
 	; Return final string
 	ret %String* %type_name
-}
-
-; Constructs an IO object
-define hidden fastcc %IO* @IO$construct()
-{
-	; IO has no variables to initialize, so we just defer to Object$construct
-	%result_obj = tail call fastcc %Object* @Object$construct()
-	%result = bitcast %Object* %result_obj to %IO*
-	ret %IO* %result
 }
 
 ; Prints a string (returns self)
@@ -584,13 +617,6 @@ define hidden fastcc i1 @Bool$unbox(%Object* %value) inlinehint
 	%value_ptr = getelementptr %Bool* %value_as_bool_ptr, i32 0, i32 1
 	%result = load i1* %value_ptr
 	ret i1 %result
-}
-
-; Constructs a string object
-;  Since strings are immutable, this just returns the empty string
-define hidden fastcc %String* @String$construct()
-{
-	ret %String* @String$empty
 }
 
 ; Returns the string's length

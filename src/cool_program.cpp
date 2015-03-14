@@ -143,7 +143,9 @@ const cool_method* lcool::cool_class::lookup_method(const std::string& name, boo
 
 llvm::Value* lcool::cool_class::create_object(llvm::IRBuilder<> builder) const
 {
-	return builder.CreateCall(_constructor);
+	// Invoke new_object on vtable pointer
+	auto new_object = _vtable->getParent()->getFunction("new_object");
+	return builder.CreateCall(new_object, _vtable);
 }
 
 llvm::Value* lcool::cool_class::upcast_to(llvm::IRBuilder<> builder, llvm::Value* value, const cool_class* to) const
