@@ -310,7 +310,7 @@ namespace lcool { namespace ast
 		/** Return type */
 		std::string type;
 
-		/** Method parameters */
+		/** Method parameters (name, type) */
 		std::vector<std::pair<std::string, std::string>> params;
 
 		/** Method body */
