@@ -187,6 +187,17 @@ std::vector<const ast::cls*> insert_empty_classes(
 	return state.layout_list;
 }
 
+// Creates a "fast" function with certain attributes applied
+llvm::Function create_fast_function(
+	llvm::Module* module, llvm::FunctionType* type, std::string name)
+{
+	llvm::Function* func = llvm::Function::Create(
+		type, llvm::Function::InternalLinkage, name, module);
+	func->setCallingConv(llvm::Fast);
+	func->addFnAttr(llvm::Attribute::NoUnwind);
+	return func;
+}
+
 // Processes a class's attributes and creates its llvm structure
 void process_attributes(const ast::cls& ast_cls, user_class* cls, cool_program& output, logger& log)
 {
@@ -308,11 +319,8 @@ void process_methods(const ast::cls& ast_cls, user_class* cls, cool_program& out
 			slot->parameter_types = std::move(parameter_types);
 
 			// Create a stub function
-			llvm::Function* func = llvm::Function::Create(
-				func_type,
-				llvm::Function::InternalLinkage,
-				cls->name() + "." + method.name,
-				module);
+			llvm::Function* func =
+				create_fast_function(module, func_type, cls->name() + "." + method.name);
 
 			// Add to list of methods
 			cls->_methods.emplace(method.name, make_unique<cool_method>(std::move(slot), func));
@@ -332,11 +340,8 @@ void process_methods(const ast::cls& ast_cls, user_class* cls, cool_program& out
 		else
 		{
 			// Create a stub function using inherited method's type
-			llvm::Function* func = llvm::Function::Create(
-				existing_method->llvm_func()->getFunctionType(),
-				llvm::Function::InternalLinkage,
-				cls->name() + "." + method.name,
-				module);
+			llvm::Function* func =
+				create_fast_function(module, func_type, cls->name() + "." + method.name);
 
 			// Add method override
 			cls->_methods.emplace(method.name, make_unique<cool_method>(cls, existing_method, func));
@@ -374,26 +379,23 @@ llvm::Constant* create_partial_vtable_init(user_class* top_cls, cool_program& ou
 		elements.push_back(output.create_string_literal(top_cls->name(), top_cls->name() + "$name"));
 
 		// 3 Constructor
-		elements.push_back(llvm::Function::Create(
+		elements.push_back(create_fast_function(
+			output.module(),
 			llvm::FunctionType::get(void_type, ptr_object_type, false),
-			llvm::Function::InternalLinkage,
-			top_cls->name() + "$construct",
-			output.module()));
+			top_cls->name() + "$construct"));
 
 		// 4 Copy constructor
 		std::vector<llvm::Type*> cc_func_params = { ptr_object_type, ptr_object_type };
-		elements.push_back(llvm::Function::Create(
+		elements.push_back(create_fast_function(
+			output.module(),
 			llvm::FunctionType::get(void_type, cc_func_params, false),
-			llvm::Function::InternalLinkage,
-			top_cls->name() + "$copyconstruct",
-			output.module()));
+			top_cls->name() + "$copyconstruct"));
 
 		// 5 Destructor
-		elements.push_back(llvm::Function::Create(
+		elements.push_back(create_fast_function(
+			output.module(),
 			llvm::FunctionType::get(void_type, ptr_object_type, false),
-			llvm::Function::InternalLinkage,
-			top_cls->name() + "$destroy",
-			output.module()));
+			top_cls->name() + "$destroy"));
 	}
 	else
 	{
