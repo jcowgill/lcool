@@ -28,6 +28,8 @@ add_executable(lcoolc
 	"${SRC_DIR}/ast.hpp"
 	"${SRC_DIR}/builtins.cpp"
 	"${SRC_DIR}/builtins.hpp"
+	"${SRC_DIR}/codegen.cpp"
+	"${SRC_DIR}/codegen.hpp"
 	"${SRC_DIR}/cool_program.cpp"
 	"${SRC_DIR}/cool_program.hpp"
 	"${BIN_DIR}/lcool_runtime.inc"

@@ -15,46 +15,25 @@
  * along with LCool.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <iostream>
+#ifndef LCOOL_CODEGEN_HPP
+#define LCOOL_CODEGEN_HPP
 
 #include "ast.hpp"
-#include "builtins.hpp"
-#include "codegen.hpp"
 #include "cool_program.hpp"
-#include "layout.hpp"
 #include "logger.hpp"
-#include "parser.hpp"
 
-int main()
+namespace lcool
 {
-	// Parse and dump to stdout
-	lcool::logger_ostream log;
-	lcool::ast::program program = lcool::parse(std::cin, "stdin", log);
-
-	if (log.has_errors())
-		return 1;
-
-	// Dump AST
-	lcool::dump_ast(std::cout, program);
-
-	// Create empty cool_program
-	llvm::LLVMContext llvm_context;
-	lcool::cool_program output(llvm_context);
-
-	// Link in builtin classes
-	lcool::load_builtins(output);
-
-	// Layout program
-	lcool::layout(program, output, log);
-	if (log.has_errors())
-		return 1;
-
-	// Generate code
-	lcool::codegen(program, output, log);
-	if (log.has_errors())
-		return 1;
-
-	// Dump module
-	output.module()->dump();
-	return 0;
+	/**
+	 * Generates the LLVM code for all the classes in the input program
+	 *
+	 * Before calling this, all the classes must be created layed out first.
+	 *
+	 * @param input program to read code from
+	 * @param output program to write code to
+	 * @param log logger to log errors to
+	 */
+	void codegen(const ast::program& input, cool_program& output, logger& log);
 }
+
+#endif
