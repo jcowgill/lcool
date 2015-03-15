@@ -217,9 +217,9 @@ void lcool::load_builtins(lcool::cool_program& program)
 
 #warning TODO Handle SELF_TYPE
 	// Register methods
-	cls_object->add_method("abort",     cls_object, 4);
-	cls_object->add_method("copy",      cls_object, 5);
-	cls_object->add_method("type_name", cls_string, 6);
+	cls_object->add_method("abort",     cls_object, 6);
+	cls_object->add_method("copy",      cls_object, 7);
+	cls_object->add_method("type_name", cls_string, 8);
 
 	cls_io->add_method("in_int",     cls_int, 1);
 	cls_io->add_method("in_string",  cls_string, 2);
