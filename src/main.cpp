@@ -49,5 +49,7 @@ int main()
 	if (log.has_errors())
 		return 1;
 
+	// Dump module
+	output.module()->dump();
 	return 0;
 }
