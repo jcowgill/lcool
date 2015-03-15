@@ -26,14 +26,15 @@ using namespace lcool;
 
 // ========= cool_method =========================================
 
-lcool::cool_method::cool_method(std::unique_ptr<cool_method_slot> slot)
+lcool::cool_method::cool_method(std::unique_ptr<cool_method_slot> slot, llvm::Function* func)
+	: _func(func)
 {
 	_slot = slot.release();
 	_declaring_class = _slot->declaring_class;
 }
 
-lcool::cool_method::cool_method(cool_class* declaring_class, cool_method* base_method)
-	: _slot(base_method->slot()), _declaring_class(declaring_class)
+lcool::cool_method::cool_method(cool_class* declaring_class, cool_method* base_method, llvm::Function* func)
+	: _slot(base_method->slot()), _declaring_class(declaring_class), _func(func)
 {
 }
 
@@ -102,7 +103,7 @@ llvm::Value* lcool::cool_method::call(
 
 // ========= cool_class ==========================================
 
-lcool::cool_class::cool_class(const std::string& name, const cool_class* parent)
+lcool::cool_class::cool_class(const std::string& name, cool_class* parent)
 	: _name(name), _parent(parent)
 {
 }
@@ -118,7 +119,7 @@ bool lcool::cool_class::is_final() const
 	return false;
 }
 
-const cool_attribute* lcool::cool_class::lookup_attribute(const std::string& name) const
+cool_attribute* lcool::cool_class::lookup_attribute(const std::string& name)
 {
 	auto iter = _attributes.find(name);
 	if (iter != _attributes.end())
@@ -127,7 +128,7 @@ const cool_attribute* lcool::cool_class::lookup_attribute(const std::string& nam
 	return nullptr;
 }
 
-const cool_method* lcool::cool_class::lookup_method(const std::string& name, bool recursive) const
+cool_method* lcool::cool_class::lookup_method(const std::string& name, bool recursive)
 {
 	// Try this class first
 	auto iter = _methods.find(name);
@@ -139,6 +140,22 @@ const cool_method* lcool::cool_class::lookup_method(const std::string& name, boo
 		return _parent->lookup_method(name, true);
 
 	return nullptr;
+}
+
+std::vector<cool_attribute*> lcool::cool_class::attributes()
+{
+	std::vector<cool_attribute*> result;
+	for (auto& pair : _attributes)
+		result.push_back(pair.second.get());
+	return result;
+}
+
+std::vector<cool_method*> lcool::cool_class::methods()
+{
+	std::vector<cool_method*> result;
+	for (auto& pair : _methods)
+		result.push_back(pair.second.get());
+	return result;
 }
 
 llvm::Value* lcool::cool_class::create_object(llvm::IRBuilder<> builder) const
@@ -196,32 +213,6 @@ void lcool::cool_class::refcount_dec(llvm::IRBuilder<> builder, llvm::Value* val
 	builder.CreateCall(_vtable->getParent()->getFunction("refcount_dec"), value);
 }
 
-// ========= cool_user_class ====================================
-
-lcool::cool_user_class::cool_user_class(const std::string& name, const cool_class* parent)
-	: cool_class(name, parent)
-{
-}
-
-lcool::cool_user_class::cool_user_class(std::string&& name, const cool_class* parent)
-	: cool_class(std::move(name), parent)
-{
-}
-
-bool lcool::cool_user_class::insert_attribute(unique_ptr<cool_attribute> attribute)
-{
-	std::string name = attribute->name;
-	auto iter = _attributes.emplace(std::move(name), std::move(attribute));
-	return iter.second;
-}
-
-bool lcool::cool_user_class::insert_method(unique_ptr<cool_method> method)
-{
-	std::string name = method->slot()->name;
-	auto iter = _methods.emplace(std::move(name), std::move(method));
-	return iter.second;
-}
-
 // ========= cool_program =======================================
 
 lcool::cool_program::cool_program(llvm::LLVMContext& context)
@@ -255,5 +246,49 @@ cool_class* lcool::cool_program::insert_class(unique_ptr<cool_class> cls)
 		return result.first->second.get();
 
 	return nullptr;
+}
 
+llvm::Constant* lcool::cool_program::create_string_literal(std::string content, std::string name)
+{
+	llvm::LLVMContext& context = module()->getContext();
+
+	// If content is zero, return the empty string
+	if (content.empty())
+		return module()->getGlobalVariable("String$empty");
+
+	// Create array from content
+	auto content_array = llvm::ConstantDataArray::getString(context, content, false);
+
+	// Create type for this literal
+	std::vector<llvm::Type*> elements;
+	auto i32_type = llvm::Type::getInt32Ty(context);
+
+	auto object_type = module()->getTypeByName("Object");
+	elements.push_back(object_type);
+	elements.push_back(i32_type);
+	elements.push_back(content_array->getType());
+
+	auto literal_type = llvm::StructType::create(elements);
+
+	// Create the literal itself
+	std::vector<llvm::Constant*> object_elements;
+	object_elements.push_back(module()->getGlobalVariable("String$vtable"));
+	object_elements.push_back(llvm::ConstantInt::get(i32_type, 1));
+
+	std::vector<llvm::Constant*> str_elements;
+	str_elements.push_back(llvm::ConstantStruct::get(object_type, object_elements));
+	str_elements.push_back(llvm::ConstantInt::get(i32_type, content.size()));
+	str_elements.push_back(content_array);
+
+	auto literal_var = new llvm::GlobalVariable(
+		*module(),
+		literal_type,
+		false,
+		llvm::GlobalVariable::PrivateLinkage,
+		llvm::ConstantStruct::get(literal_type, str_elements),
+		name);
+
+	// Cast variable to %String*
+	auto str_type = module()->getTypeByName("String")->getPointerTo();
+	return llvm::ConstantExpr::getBitCast(literal_var, str_type);
 }

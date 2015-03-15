@@ -41,11 +41,11 @@ namespace
 	{
 	public:
 		/** Creates a builtin class and extracts the LLVM structures from the given module */
-		builtin_ref_class(llvm::Module* module, const std::string& name, const cool_class* parent)
+		builtin_ref_class(llvm::Module* module, const std::string& name, cool_class* parent)
 			: cool_class(name, parent), _module(module)
 		{
 			// Add LLVM objects
-			_llvm_type = module->getTypeByName(name);
+			_llvm_type = module->getTypeByName(name)->getPointerTo();
 			_vtable = module->getNamedGlobal(name + "$vtable");
 
 			assert(_llvm_type != nullptr);
@@ -59,9 +59,9 @@ namespace
 		 */
 		void add_method(
 			const std::string& name,
-			const cool_class* return_type,
+			cool_class* return_type,
 			int vtable_index,
-			std::initializer_list<const cool_class*> param_types = {})
+			std::initializer_list<cool_class*> param_types = {})
 		{
 			// Create method slot
 			auto slot = make_unique<cool_method_slot>();
@@ -71,16 +71,20 @@ namespace
 			slot->declaring_class = this;
 			slot->vtable_index = vtable_index;
 
+			// Get LLVM function
+			auto func = _module->getFunction(this->name() + "." + name);
+			assert(func != nullptr);
+
 			// Create and insert method
-			auto result = _methods.emplace(name, make_unique<cool_method>(std::move(slot)));
+			auto result = _methods.emplace(name, make_unique<cool_method>(std::move(slot), func));
 			assert(result.second);
 		}
 
 		/** Creates a new static method */
 		void add_static_method(
 			const std::string& name,
-			const cool_class* return_type,
-			std::initializer_list<const cool_class*> param_types = {})
+			cool_class* return_type,
+			std::initializer_list<cool_class*> param_types = {})
 		{
 			add_method(name, return_type, -1, param_types);
 		}
@@ -120,7 +124,7 @@ namespace
 		builtin_value_class(
 			llvm::Module* module,
 			const std::string& name,
-			const cool_class* parent,
+			cool_class* parent,
 			llvm::IntegerType* type)
 			: cool_class(name, parent), _module(module)
 		{

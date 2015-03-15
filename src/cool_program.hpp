@@ -37,13 +37,9 @@ namespace lcool
 		std::string name;
 
 		/** The type of this attribute */
-		const cool_class& type;
+		cool_class* type;
 
-		/**
-		 * The index into the llvm_type of the parent class this attribute is stored at
-		 *
-		 * This variable is invalid until the parent class has been baked.
-		 */
+		/** The index into the llvm_type of the parent class this attribute is stored at */
 		int slot;
 	};
 
@@ -54,10 +50,10 @@ namespace lcool
 		std::string name;
 
 		/** The return type of this method */
-		const cool_class* return_type;
+		cool_class* return_type;
 
 		/** A list containing the types of this method's parameters */
-		std::vector<const cool_class*> parameter_types;
+		std::vector<cool_class*> parameter_types;
 
 		/**
 		 * The class which this method is declared in
@@ -65,7 +61,7 @@ namespace lcool
 		 * Since this is a slot class, this is always the class the method
 		 * was originally declared in.
 		 */
-		const cool_class* declaring_class;
+		cool_class* declaring_class;
 
 		/** Index within the vtable a pointer to this method is found */
 		int vtable_index;
@@ -88,19 +84,32 @@ namespace lcool
 		 *
 		 * This method will take ownership of the slot. declaring_class will
 		 * be set to slot.declaring_class.
+		 *
+		 * @param slot the method slot this method will own
+		 * @param func the LLVM function of this specific method
 		 */
-		cool_method(std::unique_ptr<cool_method_slot> slot);
+		cool_method(std::unique_ptr<cool_method_slot> slot, llvm::Function* func);
 
 		/**
 		 * Creates a new override method
 		 *
 		 * The slot will be taken from the base class and declaring_class set
 		 * accordingly.
+		 *
+		 * @param declaring_class the class which is declaring this specific method
+		 * @param base_method the method overridden by this one
+		 * @param func the LLVM function of this specific method
 		 */
-		cool_method(cool_class* declaring_class, cool_method* base_method);
+		cool_method(cool_class* declaring_class, cool_method* base_method, llvm::Function* func);
 
 		/** Destructs this method (and possibly its slot) */
 		virtual ~cool_method();
+
+		/** This method's slot data */
+		cool_method_slot* slot()
+		{
+			return _slot;
+		}
 
 		/** This method's slot data */
 		const cool_method_slot* slot() const
@@ -126,7 +135,7 @@ namespace lcool
 		 * This is the class this particular override was defined in. It might
 		 * be different to slot.declaring_class.
 		 */
-		const cool_class* declaring_class() const
+		cool_class* declaring_class()
 		{
 			return _declaring_class;
 		}
@@ -148,21 +157,21 @@ namespace lcool
 			const std::vector<llvm::Value*>& args,
 			bool static_call = false) const;
 
-	protected:
+	private:
 		cool_method() = default;
 		cool_method(const cool_method&) = delete;
 		cool_method& operator=(const cool_method&) = delete;
 
-		const cool_method_slot* _slot = nullptr;
-		llvm::Function* _func = nullptr;
-		const cool_class* _declaring_class = nullptr;
+		cool_method_slot* _slot;
+		cool_class* _declaring_class;
+		llvm::Function* _func;
 	};
 
 	/** Contains the LLVM structure of a cool class */
 	class cool_class
 	{
 	public:
-		cool_class(const std::string& name, const cool_class* parent);
+		cool_class(const std::string& name, cool_class* parent);
 		virtual ~cool_class() = default;
 
 		/** Returns the name of this class */
@@ -172,7 +181,7 @@ namespace lcool
 		}
 
 		/** Returns the parent of this class or NULL if this is the Object class */
-		const cool_class* parent() const
+		cool_class* parent()
 		{
 			return _parent;
 		}
@@ -187,7 +196,7 @@ namespace lcool
 		 * Lookup an attribute by its name
 		 * @return a pointer to the attribute or NULL if the attribute does not exist
 		 */
-		const cool_attribute* lookup_attribute(const std::string& name) const;
+		cool_attribute* lookup_attribute(const std::string& name);
 
 		/**
 		 * Lookup a method by its name
@@ -196,16 +205,22 @@ namespace lcool
 		 * @param recursive search parent classes in addition to this class
 		 * @return a pointer to the method or NULL if the method does not exist
 		 */
-		const cool_method* lookup_method(const std::string& name, bool recursive = false) const;
+		cool_method* lookup_method(const std::string& name, bool recursive = false);
+
+		/** Returns a vector containing all the attributes declared in this class */
+		std::vector<cool_attribute*> attributes();
+
+		/** Returns a vector containing all the methods declared in this class */
+		std::vector<cool_method*> methods();
 
 		/**
 		 * Returns the LLVM type used for this class
 		 *
-		 * This is usually a StructType, except for Int and Bool where it is
+		 * This is usually a PointerType, except for Int and Bool where it is
 		 * an IntegerType. The boxed Int and Bool struct types are not
 		 * accessible (they should be treated as "opaque").
 		 */
-		const llvm::Type* llvm_type() const
+		llvm::Type* llvm_type()
 		{
 			return _llvm_type;
 		}
@@ -216,7 +231,7 @@ namespace lcool
 		 * This is null for Int and Bool - if you want to call any methods on
 		 * them, you need to upcast first.
 		 */
-		const llvm::GlobalVariable* llvm_vtable() const
+		llvm::GlobalVariable* llvm_vtable()
 		{
 			return _vtable;
 		}
@@ -262,27 +277,12 @@ namespace lcool
 
 	protected:
 		std::string _name;
-		const cool_class* _parent = nullptr;
+		cool_class* _parent = nullptr;
 		std::unordered_map<std::string, unique_ptr<cool_attribute>> _attributes;
 		std::unordered_map<std::string, unique_ptr<cool_method>> _methods;
 
 		llvm::Type* _llvm_type = nullptr;
 		llvm::GlobalVariable* _vtable = nullptr;
-	};
-
-	/** A user-defined class */
-	class cool_user_class : public cool_class
-	{
-	public:
-		/** Creates a new user-defined class */
-		cool_user_class(const std::string& name, const cool_class* parent);
-		cool_user_class(std::string&& name, const cool_class* parent);
-
-		/** Inserts an attribute into the class */
-		bool insert_attribute(unique_ptr<cool_attribute> attribute);
-
-		/** Inserts a method into the class */
-		bool insert_method(unique_ptr<cool_method> method);
 	};
 
 	/**
@@ -340,6 +340,17 @@ namespace lcool
 		{
 			return static_cast<T*>(insert_class(make_unique<T>(params...)));
 		}
+
+		/**
+		 * Creates a string literal constant
+		 *
+		 * Remember to increment the refcount if the returned value is stored anywhere.
+		 *
+		 * @param content the content of the string
+		 * @param name the global name to give to this constant (may be "")
+		 * @return a string value (type %String*)
+		 */
+		llvm::Constant* create_string_literal(std::string content, std::string name = "");
 
 	private:
 		std::unordered_map<std::string, unique_ptr<cool_class>> _classes;
