@@ -60,5 +60,6 @@ add_custom_command(OUTPUT "${BIN_DIR}/lcool_runtime.inc"
 )
 
 # Set options
-include_directories(${SRC_DIR} ${BIN_DIR} ${BOOST_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
+include_directories(SYSTEM ${BOOST_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
+include_directories(${SRC_DIR} ${BIN_DIR})
 target_link_libraries(lcoolc ${BOOST_LIBRARIES} ${LLVM_LIBRARIES})
