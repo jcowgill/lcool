@@ -204,13 +204,15 @@ llvm::Value* lcool::cool_class::downcast(llvm::IRBuilder<>& builder, llvm::Value
 void lcool::cool_class::refcount_inc(llvm::IRBuilder<>& builder, llvm::Value* value) const
 {
 	// Call refcount_inc on value given
-	builder.CreateCall(_vtable->getParent()->getFunction("refcount_inc"), value);
+	builder.CreateCall(_vtable->getParent()->getFunction("refcount_inc"),
+		upcast_to_object(builder, value));
 }
 
 void lcool::cool_class::refcount_dec(llvm::IRBuilder<>& builder, llvm::Value* value) const
 {
 	// Call refcount_dec on value given
-	builder.CreateCall(_vtable->getParent()->getFunction("refcount_dec"), value);
+	builder.CreateCall(_vtable->getParent()->getFunction("refcount_dec"),
+		upcast_to_object(builder, value));
 }
 
 // ========= cool_program =======================================
