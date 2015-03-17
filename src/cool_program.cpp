@@ -53,7 +53,6 @@ llvm::Value* lcool::cool_method::call(
 	assert(_func != nullptr);
 	assert(!_func->arg_empty());
 	assert(args.size() >= 1);
-	assert(_slot->vtable_index >= 0);
 
 	// object must be the same type as _func's first argument
 	llvm::Value* instance = *args.begin();
@@ -69,8 +68,9 @@ llvm::Value* lcool::cool_method::call(
 
 	builder.CreateCall(null_check_func, instance_upcast);
 
-	// If declaring class is final, this can be a static call
-	if (_declaring_class->is_final())
+	// Always call statically if there is no vtable entry, or if the
+	//  declaring class is final
+	if (_slot->vtable_index == 0 || _declaring_class->is_final())
 		static_call = true;
 
 	// Get function to call

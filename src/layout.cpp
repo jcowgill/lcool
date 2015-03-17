@@ -239,7 +239,7 @@ void process_attributes(const ast::cls& ast_cls, user_class* cls, cool_program& 
 		cool_attribute* attrib = result.first->second.get();
 		attrib->name = ast_attrib.name;
 		attrib->type = type;
-		attrib->slot = elements.size();
+		attrib->struct_index = elements.size();
 
 		// If the type is an integer or boolean, it will be added to the elements
 		//  list later at the end of the struct to reduce the amount of padding
@@ -260,13 +260,13 @@ void process_attributes(const ast::cls& ast_cls, user_class* cls, cool_program& 
 	// Add any ints or bools to the elements list
 	for (auto attrib : attrib_int)
 	{
-		attrib->slot = elements.size();
+		attrib->struct_index = elements.size();
 		elements.push_back(attrib->type->llvm_type());
 	}
 
 	for (auto attrib : attrib_bool)
 	{
-		attrib->slot = elements.size();
+		attrib->struct_index = elements.size();
 		elements.push_back(attrib->type->llvm_type());
 	}
 
@@ -419,7 +419,7 @@ llvm::Constant* create_partial_vtable_init(user_class* top_cls, cool_program& ou
 			assert(resolved_method->slot() == slot);
 
 			// Add the correct function into the correct vtable slot
-			if (slot->vtable_index >= static_cast<int>(elements.size()))
+			if (slot->vtable_index >= elements.size())
 				elements.resize(slot->vtable_index + 1);
 
 			elements[slot->vtable_index] = resolved_method->llvm_func();

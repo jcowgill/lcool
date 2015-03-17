@@ -60,7 +60,7 @@ namespace
 		void add_method(
 			const std::string& name,
 			cool_class* return_type,
-			int vtable_index,
+			unsigned vtable_index,
 			std::initializer_list<cool_class*> param_types = {})
 		{
 			// Create method slot
@@ -86,7 +86,7 @@ namespace
 			cool_class* return_type,
 			std::initializer_list<cool_class*> param_types = {})
 		{
-			add_method(name, return_type, -1, param_types);
+			add_method(name, return_type, 0, param_types);
 		}
 
 	protected:

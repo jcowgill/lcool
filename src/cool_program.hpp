@@ -40,7 +40,7 @@ namespace lcool
 		cool_class* type;
 
 		/** The index into the llvm_type of the parent class this attribute is stored at */
-		int slot;
+		unsigned struct_index;
 	};
 
 	/** Contains information about a method slot */
@@ -63,8 +63,12 @@ namespace lcool
 		 */
 		cool_class* declaring_class;
 
-		/** Index within the vtable a pointer to this method is found */
-		int vtable_index;
+		/**
+		 * Index within the vtable a pointer to this method is found
+		 *
+		 * Is this field is 0, this method cannot be called through a vtable.
+		 */
+		unsigned vtable_index;
 	};
 
 	/**
