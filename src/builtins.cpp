@@ -107,7 +107,7 @@ namespace
 			return true;
 		}
 
-		virtual llvm::Value* create_object(llvm::IRBuilder<> builder) const
+		virtual llvm::Value* create_object(llvm::IRBuilder<>& builder) const override
 		{
 			// Return the global empty string (after incrementing its refcount)
 			auto empty_str = _module->getGlobalVariable("String$empty");
@@ -141,14 +141,13 @@ namespace
 			return true;
 		}
 
-
-		virtual llvm::Value* create_object(llvm::IRBuilder<>) const
+		virtual llvm::Value* create_object(llvm::IRBuilder<>&) const override
 		{
 			// Return zero value for this type
 			return llvm::ConstantInt::get(_llvm_type, 0);
 		}
 
-		virtual llvm::Value* upcast_to(llvm::IRBuilder<> builder, llvm::Value* value, const cool_class* to) const
+		virtual llvm::Value* upcast_to(llvm::IRBuilder<>& builder, llvm::Value* value, const cool_class* to) const override
 		{
 			// Handle self
 			if (to == this)
@@ -161,7 +160,7 @@ namespace
 			return builder.CreateCall(_module->getFunction(_name + "$box"), value);
 		}
 
-		virtual llvm::Value* downcast(llvm::IRBuilder<> builder, llvm::Value* value) const
+		virtual llvm::Value* downcast(llvm::IRBuilder<>& builder, llvm::Value* value) const override
 		{
 			// Value must be object's type
 			assert(value->getType() == _parent->llvm_type());
@@ -170,11 +169,11 @@ namespace
 			return builder.CreateCall(_module->getFunction(_name + "$unbox"), value);
 		}
 
-		virtual void refcount_inc(llvm::IRBuilder<>, llvm::Value*) const
+		virtual void refcount_inc(llvm::IRBuilder<>&, llvm::Value*) const override
 		{
 		}
 
-		virtual void refcount_dec(llvm::IRBuilder<>, llvm::Value*) const
+		virtual void refcount_dec(llvm::IRBuilder<>&, llvm::Value*) const override
 		{
 		}
 

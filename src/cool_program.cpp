@@ -158,14 +158,14 @@ std::vector<cool_method*> lcool::cool_class::methods()
 	return result;
 }
 
-llvm::Value* lcool::cool_class::create_object(llvm::IRBuilder<> builder) const
+llvm::Value* lcool::cool_class::create_object(llvm::IRBuilder<>& builder) const
 {
 	// Invoke new_object on vtable pointer
 	auto new_object = _vtable->getParent()->getFunction("new_object");
 	return builder.CreateCall(new_object, _vtable);
 }
 
-llvm::Value* lcool::cool_class::upcast_to(llvm::IRBuilder<> builder, llvm::Value* value, const cool_class* to) const
+llvm::Value* lcool::cool_class::upcast_to(llvm::IRBuilder<>& builder, llvm::Value* value, const cool_class* to) const
 {
 	// Handle trivial case
 	if (to == this)
@@ -187,7 +187,7 @@ llvm::Value* lcool::cool_class::upcast_to(llvm::IRBuilder<> builder, llvm::Value
 	return builder.CreateInBoundsGEP(value, gep_args);
 }
 
-llvm::Value* lcool::cool_class::upcast_to_object(llvm::IRBuilder<> builder, llvm::Value* value) const
+llvm::Value* lcool::cool_class::upcast_to_object(llvm::IRBuilder<>& builder, llvm::Value* value) const
 {
 	const cool_class* cls = this;
 	while (cls->_parent != nullptr)
@@ -196,18 +196,18 @@ llvm::Value* lcool::cool_class::upcast_to_object(llvm::IRBuilder<> builder, llvm
 	return upcast_to(builder, value, cls);
 }
 
-llvm::Value* lcool::cool_class::downcast(llvm::IRBuilder<> builder, llvm::Value* value) const
+llvm::Value* lcool::cool_class::downcast(llvm::IRBuilder<>& builder, llvm::Value* value) const
 {
 	return builder.CreateBitCast(value, _llvm_type->getPointerTo());
 }
 
-void lcool::cool_class::refcount_inc(llvm::IRBuilder<> builder, llvm::Value* value) const
+void lcool::cool_class::refcount_inc(llvm::IRBuilder<>& builder, llvm::Value* value) const
 {
 	// Call refcount_inc on value given
 	builder.CreateCall(_vtable->getParent()->getFunction("refcount_inc"), value);
 }
 
-void lcool::cool_class::refcount_dec(llvm::IRBuilder<> builder, llvm::Value* value) const
+void lcool::cool_class::refcount_dec(llvm::IRBuilder<>& builder, llvm::Value* value) const
 {
 	// Call refcount_dec on value given
 	builder.CreateCall(_vtable->getParent()->getFunction("refcount_dec"), value);

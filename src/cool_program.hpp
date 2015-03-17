@@ -243,19 +243,19 @@ namespace lcool
 		 * For Int and Bool, this returns (i32 0) or (i1 0) respectively.
 		 * For String, returns the empty string.
 		 */
-		virtual llvm::Value* create_object(llvm::IRBuilder<> builder) const;
+		virtual llvm::Value* create_object(llvm::IRBuilder<>& builder) const;
 
 		/**
 		 * Upcasts an object of this class's type to one of it's parent types
 		 *
 		 * For Int and Bool, upcasting to Object will box the value.
 		 */
-		virtual llvm::Value* upcast_to(llvm::IRBuilder<> builder, llvm::Value* value, const cool_class* to) const;
+		virtual llvm::Value* upcast_to(llvm::IRBuilder<>& builder, llvm::Value* value, const cool_class* to) const;
 
 		/**
 		 * Helper method to upcast to Object
 		 */
-		llvm::Value* upcast_to_object(llvm::IRBuilder<> builder, llvm::Value* value) const;
+		llvm::Value* upcast_to_object(llvm::IRBuilder<>& builder, llvm::Value* value) const;
 
 		/**
 		 * Statically downcasts a value to this class's type.
@@ -263,17 +263,17 @@ namespace lcool
 		 * This is a bitcast, so you must be sure the value is of this class's type!
 		 * For Int and Bool, this will unbox the value.
 		 */
-		virtual llvm::Value* downcast(llvm::IRBuilder<> builder, llvm::Value* value) const;
+		virtual llvm::Value* downcast(llvm::IRBuilder<>& builder, llvm::Value* value) const;
 
 		/**
 		 * Increment the refcount on an object
 		 */
-		virtual void refcount_inc(llvm::IRBuilder<> builder, llvm::Value* value) const;
+		virtual void refcount_inc(llvm::IRBuilder<>& builder, llvm::Value* value) const;
 
 		/**
 		 * Decrement the refcount on an object (and possibly free it)
 		 */
-		virtual void refcount_dec(llvm::IRBuilder<> builder, llvm::Value* value) const;
+		virtual void refcount_dec(llvm::IRBuilder<>& builder, llvm::Value* value) const;
 
 	protected:
 		std::string _name;
