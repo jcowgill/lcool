@@ -188,12 +188,12 @@ std::vector<const ast::cls*> insert_empty_classes(
 }
 
 // Creates a "fast" function with certain attributes applied
-llvm::Function create_fast_function(
+llvm::Function* create_fast_function(
 	llvm::Module* module, llvm::FunctionType* type, std::string name)
 {
 	llvm::Function* func = llvm::Function::Create(
 		type, llvm::Function::InternalLinkage, name, module);
-	func->setCallingConv(llvm::Fast);
+	func->setCallingConv(llvm::CallingConv::Fast);
 	func->addFnAttr(llvm::Attribute::NoUnwind);
 	return func;
 }
@@ -340,8 +340,10 @@ void process_methods(const ast::cls& ast_cls, user_class* cls, cool_program& out
 		else
 		{
 			// Create a stub function using inherited method's type
-			llvm::Function* func =
-				create_fast_function(module, func_type, cls->name() + "." + method.name);
+			llvm::Function* func = create_fast_function(
+				module,
+				existing_method->llvm_func()->getFunctionType(),
+				cls->name() + "." + method.name);
 
 			// Add method override
 			cls->_methods.emplace(method.name, make_unique<cool_method>(cls, existing_method, func));
