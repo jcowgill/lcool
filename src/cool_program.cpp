@@ -198,7 +198,7 @@ llvm::Value* lcool::cool_class::upcast_to_object(llvm::IRBuilder<>& builder, llv
 
 llvm::Value* lcool::cool_class::downcast(llvm::IRBuilder<>& builder, llvm::Value* value) const
 {
-	return builder.CreateBitCast(value, _llvm_type->getPointerTo());
+	return builder.CreateBitCast(value, _llvm_type);
 }
 
 void lcool::cool_class::refcount_inc(llvm::IRBuilder<>& builder, llvm::Value* value) const
