@@ -55,18 +55,17 @@ llvm::Value* lcool::cool_method::call(
 	assert(args.size() >= 1);
 
 	// object must be the same type as _func's first argument
-	llvm::Value* instance = *args.begin();
-	assert(_func->getFunctionType()->getParamType(0) == instance->getType());
+	assert(_func->getFunctionType()->getParamType(0) == args[0]->getType());
 
 	// Upcast to object
-	llvm::Value* instance_upcast = _slot->declaring_class->upcast_to_object(builder, instance);
+	llvm::Value* self_upcast = _slot->declaring_class->upcast_to_object(builder, args[0]);
 
 	// Call null_check on the object
 	llvm::Module* module = _func->getParent();
 	llvm::Function* null_check_func = module->getFunction("null_check");
 	assert(null_check_func != nullptr);
 
-	builder.CreateCall(null_check_func, instance_upcast);
+	builder.CreateCall(null_check_func, self_upcast);
 
 	// Always call statically if there is no vtable entry, or if the
 	//  declaring class is final
@@ -86,7 +85,7 @@ llvm::Value* lcool::cool_method::call(
 
 		llvm::Value* zero = builder.getInt32(0);
 		std::vector<llvm::Value*> gep_args1{ zero, zero };
-		llvm::Value* ptr_ptr_vtable = builder.CreateInBoundsGEP(instance_upcast, gep_args1);
+		llvm::Value* ptr_ptr_vtable = builder.CreateInBoundsGEP(self_upcast, gep_args1);
 		llvm::Value* ptr_obj_vtable = builder.CreateLoad(ptr_ptr_vtable);
 		llvm::Value* ptr_vtable = builder.CreateBitCast(ptr_obj_vtable, ptr_vtable_type);
 
