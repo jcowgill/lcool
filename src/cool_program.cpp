@@ -162,7 +162,8 @@ llvm::Value* lcool::cool_class::create_object(llvm::IRBuilder<>& builder) const
 {
 	// Invoke new_object on vtable pointer
 	auto new_object = _vtable->getParent()->getFunction("new_object");
-	return builder.CreateCall(new_object, _vtable);
+	auto value = builder.CreateCall(new_object, _vtable);
+	return downcast(builder, value);
 }
 
 llvm::Value* lcool::cool_class::upcast_to(llvm::IRBuilder<>& builder, llvm::Value* value, const cool_class* to) const
