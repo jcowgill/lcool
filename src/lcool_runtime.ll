@@ -53,6 +53,7 @@
 ; null_check
 ; refcount_inc
 ; refcount_dec
+; zero_division_check
 ;
 ; Int$box
 ; Bool$box
@@ -232,6 +233,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
 @err_abort = private unnamed_addr constant [22 x i8] c"Object.abort() called\00"
 @err_null = private unnamed_addr constant [27 x i8] c"Illegal use of void object\00"
 @err_range = private unnamed_addr constant [35 x i8] c"Bad range for String.substr() call\00"
+@err_div_zero = private unnamed_addr constant [17 x i8] c"Division by zero\00"
 
 ; Builtin method implementations
 
@@ -414,6 +416,20 @@ Decrement:
 	%refcount_new = sub nuw i32 %refcount_old, 1
 	store i32 %refcount_new, i32* %refcount_ptr
 	ret void
+}
+
+; Verifies that the given argument is not 0
+define hidden fastcc void @zero_division_check(i32 %divisor) inlinehint
+{
+	%is_zero = icmp eq i32 %divisor, 0
+	br i1 %is_zero, label %Zero, label %NotZero
+
+NotZero:
+	ret void
+
+Zero:
+	call fastcc void @abort_with_msg(i8* getelementptr inbounds ([17 x i8]* @err_div_zero, i32 0, i32 0))
+	unreachable
 }
 
 ; Destroy the given object
