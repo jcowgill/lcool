@@ -386,16 +386,29 @@ Null:
 ; Increments the refcount on an object
 define hidden fastcc void @refcount_inc(%Object* %this) inlinehint
 {
+	; Check for null objects
+	%is_null = icmp eq %Object* %this, null
+	br i1 %is_null, label %Null, label %NotNull
+
+NotNull:
 	%refcount_ptr = getelementptr inbounds %Object* %this, i32 0, i32 1
 	%refcount_old = load i32* %refcount_ptr
 	%refcount_new = add nuw i32 %refcount_old, 1
 	store i32 %refcount_new, i32* %refcount_ptr
+	ret void
+
+Null:
 	ret void
 }
 
 ; Decrements the refcount on an object
 define hidden fastcc void @refcount_dec(%Object* %this) inlinehint
 {
+	; Check for null objects
+	%is_null = icmp eq %Object* %this, null
+	br i1 %is_null, label %Null, label %NotNull
+
+NotNull:
 	; Get refcount and see if we should destroy it
 	%refcount_ptr = getelementptr inbounds %Object* %this, i32 0, i32 1
 	%refcount_old = load i32* %refcount_ptr
@@ -415,6 +428,10 @@ Decrement:
 	; Decrement counter
 	%refcount_new = sub nuw i32 %refcount_old, 1
 	store i32 %refcount_new, i32* %refcount_ptr
+	ret void
+
+Null:
+	; Do nothing
 	ret void
 }
 
