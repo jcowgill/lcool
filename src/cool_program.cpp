@@ -178,7 +178,10 @@ llvm::Value* lcool::cool_class::upcast_to(llvm::IRBuilder<>& builder, llvm::Valu
 
 	while (current != to)
 	{
-		assert(current != nullptr);
+		// If current is null, to is not a subclass of this class
+		if (current == nullptr)
+			return nullptr;
+
 		current = current->_parent;
 		num_zeros++;
 	}

@@ -154,7 +154,8 @@ namespace
 				return value;
 
 			// Class to cast to must be Object
-			assert(to == _parent);
+			if (to != _parent)
+				return nullptr;
 
 			// Box this value
 			return builder.CreateCall(_module->getFunction(_name + "$box"), value);

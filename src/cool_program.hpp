@@ -230,7 +230,7 @@ namespace lcool
 		}
 
 		/**
-		 * Returns the LLVM vtable object used for this class
+		 * Returns a pointer to the LLVM vtable object used for this class
 		 *
 		 * This is null for Int and Bool - if you want to call any methods on
 		 * them, you need to upcast first.
@@ -253,6 +253,7 @@ namespace lcool
 		 * Upcasts an object of this class's type to one of it's parent types
 		 *
 		 * For Int and Bool, upcasting to Object will box the value.
+		 * @return the upcasted value or nullptr if to is not a subclass of this class
 		 */
 		virtual llvm::Value* upcast_to(llvm::IRBuilder<>& builder, llvm::Value* value, const cool_class* to) const;
 
