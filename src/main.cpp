@@ -15,6 +15,7 @@
  * along with LCool.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <llvm/IR/Verifier.h>
 #include <iostream>
 
 #include "ast.hpp"
@@ -56,5 +57,8 @@ int main()
 
 	// Dump module
 	output.module()->dump();
+
+	// Verify module
+	llvm::verifyModule(*output.module());
 	return 0;
 }
