@@ -215,6 +215,45 @@ void lcool::cool_class::refcount_dec(llvm::IRBuilder<>& builder, llvm::Value* va
 		upcast_to_object(builder, value));
 }
 
+llvm::Function* lcool::cool_class::constructor()
+{
+	return get_object_vtable_func(3);
+}
+
+llvm::Function* lcool::cool_class::copy_constructor()
+{
+	return get_object_vtable_func(4);
+}
+
+llvm::Function* lcool::cool_class::destructor()
+{
+	return get_object_vtable_func(5);
+}
+
+llvm::Function* lcool::cool_class::get_object_vtable_func(unsigned index)
+{
+	assert(_vtable != nullptr);
+	assert(_vtable->hasInitializer());
+
+	// Get this class's vtable and traverse upwards until we reach Object
+	llvm::ConstantStruct* current =
+		llvm::cast<llvm::ConstantStruct>(_vtable->getInitializer());
+
+	for(;;)
+	{
+		auto next = current->getOperand(0);
+		auto next_struct = llvm::dyn_cast<llvm::ConstantStruct>(next);
+
+		if (next_struct == nullptr)
+			break;
+
+		current = next_struct;
+	}
+
+	// Get relevant function pointer
+	return llvm::cast<llvm::Function>(current->getOperand(index));
+}
+
 // ========= cool_program =======================================
 
 lcool::cool_program::cool_program(llvm::LLVMContext& context)

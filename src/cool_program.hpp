@@ -279,6 +279,29 @@ namespace lcool
 		 */
 		virtual void refcount_dec(llvm::IRBuilder<>& builder, llvm::Value* value) const;
 
+		/**
+		 * Returns a pointer to this class's constructor
+		 *
+		 * Do not use this to create instances of objects. Use create_object instead.
+		 *
+		 * Note that Ints, Bools and Strings have fake constructors because they
+		 * are not designed to be created this way.
+		 */
+		llvm::Function* constructor();
+
+		/**
+		 * Returns a pointer to this class's copy constructor
+		 *
+		 * Do not use this to copy objects. Call Object.copy instead (possibly statically).
+		 *
+		 * Note that Ints, Bools and Strings have fake constructors because they
+		 * are not designed to be created this way.
+		 */
+		llvm::Function* copy_constructor();
+
+		/** Returns a pointer to this class's destructor */
+		llvm::Function* destructor();
+
 	protected:
 		std::string _name;
 		cool_class* _parent = nullptr;
@@ -287,6 +310,9 @@ namespace lcool
 
 		llvm::Type* _llvm_type = nullptr;
 		llvm::GlobalVariable* _vtable = nullptr;
+
+		/** Returns the function pointed to by the nth item in this class's Object vtable */
+		llvm::Function* get_object_vtable_func(unsigned index);
 	};
 
 	/**
