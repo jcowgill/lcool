@@ -82,7 +82,7 @@ llvm::Value* lcool::cool_method::call(
 	else
 	{
 		// Get pointer to vtable
-		llvm::Type* ptr_vtable_type = _slot->declaring_class->llvm_vtable()->getType()->getPointerTo();
+		llvm::Type* ptr_vtable_type = _slot->declaring_class->llvm_vtable()->getType();
 
 		llvm::Value* zero = builder.getInt32(0);
 		std::vector<llvm::Value*> gep_args1{ zero, zero };
