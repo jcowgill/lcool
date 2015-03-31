@@ -91,6 +91,9 @@ namespace lcool
 		virtual void error(const std::string& str) override;
 		virtual void error(const location& loc, const std::string& str) override;
 
+		using logger::warning;
+		using logger::error;
+
 	private:
 		std::ostream& stream;
 		bool errors_printed = false;
