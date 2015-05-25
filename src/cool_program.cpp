@@ -159,9 +159,12 @@ std::vector<cool_method*> lcool::cool_class::methods()
 
 llvm::Value* lcool::cool_class::create_object(llvm::IRBuilder<>& builder) const
 {
+	// Upcast to object
+	auto vtable_as_objectvtable = upcast_to_object(builder, _vtable);
+
 	// Invoke new_object on vtable pointer
 	auto new_object = _vtable->getParent()->getFunction("new_object");
-	auto value = builder.CreateCall(new_object, _vtable);
+	auto value = builder.CreateCall(new_object, vtable_as_objectvtable);
 	return downcast(builder, value);
 }
 
