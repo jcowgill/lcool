@@ -278,6 +278,7 @@ void process_attributes(const ast::cls& ast_cls, user_class* cls, cool_program& 
 void process_methods(const ast::cls& ast_cls, user_class* cls, cool_program& output, logger& log)
 {
 	llvm::Module* module = output.module();
+	unsigned next_vtable_index = 1;
 
 	for (const ast::method& method : ast_cls.methods)
 	{
@@ -317,6 +318,9 @@ void process_methods(const ast::cls& ast_cls, user_class* cls, cool_program& out
 			slot->declaring_class = cls;
 			slot->return_type = return_type;
 			slot->parameter_types = std::move(parameter_types);
+
+			// Assign it an index in the vtable
+			slot->vtable_index = next_vtable_index++;
 
 			// Create a stub function
 			llvm::Function* func =
@@ -426,30 +430,24 @@ llvm::Constant* create_partial_vtable_init(user_class* top_cls, cool_program& ou
 		}
 	}
 
+	// Get vtable struct's type
+	llvm::StructType * vtabletype = output.module()->getTypeByName(cls->name() + "$vtabletype");
+	if (vtabletype == nullptr)
+	{
+		std::vector<llvm::Type*> element_types;
+		for (auto element : elements)
+			element_types.push_back(element->getType());
+
+		vtabletype = llvm::StructType::create(element_types, cls->name() + "$vtabletype");
+	}
+
 	// Return final struct
-	return llvm::ConstantStruct::getAnon(elements);
+	return llvm::ConstantStruct::get(vtabletype, elements);
 }
 
 // Creates a class's vtable
 void create_vtable(user_class* cls, cool_program& output)
 {
-	// The vtable's type is a struct containing the parent vtable struct and
-	// function pointers for any methods we need to provide slots for.
-	std::vector<llvm::Type*> type_elements;
-	type_elements.push_back(cls->parent()->llvm_vtable()->getType());
-
-	for (auto& method : cls->methods())
-	{
-		cool_method_slot* slot = method->slot();
-
-		if (slot->declaring_class == cls)
-		{
-			// Add a slot for this method and record vtable index
-			slot->vtable_index = type_elements.size();
-			type_elements.push_back(method->llvm_func()->getType()->getPointerTo());
-		}
-	}
-
 	// Recursively construct initializer for the vtable
 	auto initializer = create_partial_vtable_init(cls, output, cls);
 
