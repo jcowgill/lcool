@@ -371,7 +371,10 @@ llvm::Constant* create_partial_vtable_init(user_class* top_cls, cool_program& ou
 		auto ptr_object_type = cls->llvm_type();
 
 		// 0 Pointer to parent vtable
-		elements.push_back(top_cls->parent()->llvm_vtable());
+		auto object_vtabletype = output.lookup_class("Object")->llvm_vtable()->getType();
+		elements.push_back(llvm::ConstantExpr::getBitCast(
+			top_cls->parent()->llvm_vtable(),
+			object_vtabletype));
 
 		// 1 Object size (calculated through some gep magic)
 		auto null_ptr = llvm::ConstantPointerNull::get(top_cls->llvm_type());
