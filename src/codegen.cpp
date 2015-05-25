@@ -700,8 +700,7 @@ public:
 
 			case ast::compute_binary_type::divide:
 				// Check for division by zero
-				check_func = _program.module()->getFunction("zero_division_check");
-				_builder.CreateCall(check_func, right.value);
+				_program.call_global(_builder, "zero_division_check", right.value);
 
 				// Do the division
 				_result.value = _builder.CreateSDiv(left.value, right.value);
@@ -747,7 +746,8 @@ void gen_copy_constructor(cool_program& output, cool_class* cls)
 
 	// Call parent copy constructor
 	llvm::Function* parent_func = cls->parent()->copy_constructor();
-	builder.CreateCall2(parent_func, pthis_obj, other_obj);
+	auto call_inst = builder.CreateCall2(parent_func, pthis_obj, other_obj);
+	call_inst->setCallingConv(llvm::CallingConv::Fast);
 
 	// Copy each attribute
 	for (cool_attribute* attr : cls->attributes())
@@ -784,7 +784,9 @@ void gen_destructor(cool_program& output, cool_class* cls)
 
 	// Call parent destructor
 	llvm::Function* parent_func = cls->parent()->destructor();
-	builder.CreateCall(parent_func, to_destroy_obj)->setTailCall();
+	auto call_inst = builder.CreateCall(parent_func, to_destroy_obj);
+	call_inst->setCallingConv(llvm::CallingConv::Fast);
+	call_inst->setTailCall();
 	builder.CreateRetVoid();
 }
 
@@ -811,7 +813,8 @@ void gen_constructor(const ast::cls& input, cool_program& output, cool_class* cl
 	// Call parent constructor
 	llvm::Value* raw_object = func->arg_begin();
 	builder.SetInsertPoint(user_block);
-	builder.CreateCall(cls->parent()->constructor(), raw_object);
+	auto call_inst = builder.CreateCall(cls->parent()->constructor(), raw_object);
+	call_inst->setCallingConv(llvm::CallingConv::Fast);
 
 	// Default initialize all attributes
 	for (auto attr : cls->attributes())

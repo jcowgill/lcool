@@ -158,7 +158,7 @@ namespace
 				return nullptr;
 
 			// Box this value
-			return builder.CreateCall(_module->getFunction(_name + "$box"), value);
+			return call_global(builder, _name + "$box", value);
 		}
 
 		virtual llvm::Value* downcast(llvm::IRBuilder<>& builder, llvm::Value* value) const override
@@ -167,7 +167,7 @@ namespace
 			assert(value->getType() == _parent->llvm_type());
 
 			// Unbox this value
-			return builder.CreateCall(_module->getFunction(_name + "$unbox"), value);
+			return call_global(builder, _name + "$unbox", value);
 		}
 
 		virtual void refcount_inc(llvm::IRBuilder<>&, llvm::Value*) const override
