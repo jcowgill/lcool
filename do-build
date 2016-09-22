@@ -3,6 +3,9 @@
 # change to the directory where the script is located
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 
+# compiler flags
+export LDFLAGS='-Wl,--as-needed'
+
 # do the build
 mkdir -p build
 cd build
