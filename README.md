@@ -22,7 +22,7 @@ need to set the `-DCMAKE_PREFIX_PATH` variable to the root of your LLVM
 installation.
 
 ## License
-Copyright (C) 2014-2015 James Cowgill
+Copyright (C) 2014-2016 James Cowgill
 
 LCool is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
