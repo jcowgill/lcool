@@ -1,10 +1,12 @@
 # LCool
-LCool is a compiler for the Cool programming language that uses LLVM as its backend.
+LCool is a compiler for the Cool programming language that uses LLVM as its
+backend.
 
 ## Compiling
 You need boost with the "program options" library, and LLVM to compile lcool.
 
-This project is written in C++ and uses CMake as its build system. To compile and install it, run something like:
+This project is written in C++ and uses CMake as its build system. To compile
+and install it, run something like:
 
 	mkdir build
 	cd build
