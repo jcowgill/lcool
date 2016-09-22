@@ -7,22 +7,30 @@ project(lcool)
 set(LCOOL_VERSION_MAJOR 0)
 set(LCOOL_VERSION_MINOR 1)
 
-# Add local modules
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
-
 # Enable GCC flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -pedantic")
 
 # Find LLVM and Boost
 find_package(Boost REQUIRED COMPONENTS program_options)
-find_package(LLVM 3.5 REQUIRED)
+find_package(LLVM REQUIRED CONFIG)
 
-# Enable extended definitions for LLVM
-add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
+# Validate LLVM version
+if(LLVM_VERSION VERSION_LESS 3.5)
+	message(FATAL_ERROR "You need LLVM >= 3.5 to build ${CMAKE_PROJECT_NAME}")
+elseif(NOT LLVM_VERSION VERSION_LESS 3.6)
+	message(WARNING "LLVM ${LLVM_VERSION} has not been tested")
+endif()
+
+# Add library include directories and definitions
+include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
+add_definitions(${LLVM_DEFINITIONS})
 
 # Compile compiler using sources
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 set(BIN_DIR "${CMAKE_BINARY_DIR}")
+
+include_directories(${SRC_DIR} ${BIN_DIR})
 add_executable(lcoolc
 	"${SRC_DIR}/ast.cpp"
 	"${SRC_DIR}/ast.hpp"
@@ -49,7 +57,7 @@ add_executable(lcoolc
 # Assemble builtins file
 add_custom_command(OUTPUT "${BIN_DIR}/lcool_runtime.bc"
 	DEPENDS "${SRC_DIR}/lcool_runtime.ll"
-	COMMAND ${LLVM_BIN_DIR}/llvm-as -o "${BIN_DIR}/lcool_runtime.bc" "${SRC_DIR}/lcool_runtime.ll"
+	COMMAND ${LLVM_TOOLS_BINARY_DIR}/llvm-as -o "${BIN_DIR}/lcool_runtime.bc" "${SRC_DIR}/lcool_runtime.ll"
 	VERBATIM
 )
 
@@ -59,7 +67,6 @@ add_custom_command(OUTPUT "${BIN_DIR}/lcool_runtime.inc"
 	VERBATIM
 )
 
-# Set options
-include_directories(SYSTEM ${Boost_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
-include_directories(${SRC_DIR} ${BIN_DIR})
-target_link_libraries(lcoolc ${Boost_LIBRARIES} ${LLVM_LIBRARIES})
+# Link libraries
+llvm_map_components_to_libnames(llvm_libs bitreader bitwriter core linker support)
+target_link_libraries(lcoolc ${Boost_LIBRARIES} ${llvm_libs})
