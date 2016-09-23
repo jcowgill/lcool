@@ -1,0 +1,46 @@
+# Use C so we can set CXX ourselves manually
+language: c
+
+# Use trusty (which has some newer LLVM versions)
+sudo: true
+dist: trusty
+
+# Install dependencies global dependencies
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - libboost-dev
+      - libboost-program-options-dev
+
+# Build matrix
+compiler:
+  - gcc-4.9
+  - gcc-5
+  - gcc-6
+  - clang-3.5
+  - clang-3.6
+  - clang-3.8
+
+env:
+  global:
+    - LDFLAGS=-Wl,--as-needed
+  matrix:
+    - LLVM_VERSION=3.5
+    - LLVM_VERSION=3.6
+    - LLVM_VERSION=3.8
+
+# Main build scripts
+install:
+  - export CXX=$(echo $CC | sed 's/gcc/g++/' | sed 's/clang/clang++/')
+  - if [[ $CXX == clang* ]]; then CCPKG=$CC; else CCPKG=$CXX; fi
+  - sudo apt-get install -y $CCPKG llvm-$LLVM_VERSION-dev
+
+before_script:
+  - mkdir build
+  - cd build
+  - cmake .. -Wdev -DBROKEN_UBUNTU_LLVM=Y -DLLVM_ROOT=/usr/lib/llvm-$LLVM_VERSION
+
+script:
+  - make VERBOSE=1
