@@ -10,9 +10,16 @@ set(LCOOL_VERSION_MINOR 1)
 # Enable GCC flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -pedantic")
 
-# Find LLVM and Boost
+# Find Boost
 find_package(Boost REQUIRED COMPONENTS program_options)
-find_package(LLVM REQUIRED CONFIG)
+
+# Find LLVM
+option(BROKEN_UBUNTU_LLVM "Set if you have broken Ubuntu LLVM cmake scripts (pre-xenial)")
+if (BROKEN_UBUNTU_LLVM)
+	include(cmake/BrokenLLVM.cmake)
+else()
+	find_package(LLVM REQUIRED CONFIG)
+endif()
 
 # Validate LLVM version
 if(LLVM_VERSION VERSION_LESS 3.5)

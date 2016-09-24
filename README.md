@@ -21,6 +21,11 @@ system. If you installed LLVM from your distribution's repository it should work
 need to set the `-DCMAKE_PREFIX_PATH` variable to the root of your LLVM
 installation.
 
+On older versions of Ubuntu (pre xenial), the CMake scripts are broken so you
+will get errors when running CMake. There is a workaround which you can activate
+by passing `-DBROKEN_UBUNTU_LLVM=Y` and `-DLLVM_ROOT=/usr/lib/llvm-<version>` to
+CMake.
+
 ## License
 Copyright (C) 2014-2016 James Cowgill
 
