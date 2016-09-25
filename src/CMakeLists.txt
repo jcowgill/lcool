@@ -47,5 +47,5 @@ add_custom_command(OUTPUT "${BIN_DIR}/lcool_runtime.inc"
 )
 
 # Link libraries
-llvm_map_components_to_libnames(llvm_libs bitreader bitwriter core linker support)
+llvm_map_components_to_libnames(llvm_libs bitreader bitwriter core support)
 target_link_libraries(lcoolc ${Boost_LIBRARIES} ${llvm_libs})

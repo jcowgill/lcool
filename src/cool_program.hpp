@@ -328,18 +328,22 @@ namespace lcool
 	class cool_program
 	{
 	public:
-		/** Creates an empty cool program with a LLVM module using the given context */
+		/**
+		 * Creates a cool program initialized with the builtin classes
+		 *
+		 * @param context LLVM context to create the main Module in
+		 */
 		explicit cool_program(llvm::LLVMContext& context);
 
 		/** Returns this program's LLVM module */
 		llvm::Module* module()
 		{
-			return &_module;
+			return _module.get();
 		}
 
 		const llvm::Module* module() const
 		{
-			return &_module;
+			return _module.get();
 		}
 
 		/**
@@ -404,7 +408,7 @@ namespace lcool
 
 	private:
 		std::unordered_map<std::string, unique_ptr<cool_class>> _classes;
-		llvm::Module _module;
+		unique_ptr<llvm::Module> _module;
 	};
 }
 

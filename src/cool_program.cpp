@@ -260,8 +260,10 @@ llvm::CallInst* lcool::cool_class::call_global(llvm::IRBuilder<>& builder, std::
 // ========= cool_program =======================================
 
 lcool::cool_program::cool_program(llvm::LLVMContext& context)
-	: _module("lcool_program", context)
 {
+	// Load builtins
+	_module = lcool::builtins_load_bitfile(context);
+	lcool::builtins_register(*this);
 }
 
 cool_class* lcool::cool_program::lookup_class(const std::string& name)

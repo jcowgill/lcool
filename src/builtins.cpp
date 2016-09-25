@@ -16,7 +16,6 @@
  */
 
 #include <llvm/Bitcode/ReaderWriter.h>
-#include <llvm/Linker/Linker.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <cassert>
 #include <cstdlib>
@@ -183,29 +182,27 @@ namespace
 	};
 }
 
-// Link the runtime file into the given module
-static void link_runtime(llvm::Module* dest)
+unique_ptr<llvm::Module> lcool::builtins_load_bitfile(llvm::LLVMContext& context)
 {
 	// Parse bitcode_data to get an LLVM module
 	llvm::StringRef bitcode_data_ref(reinterpret_cast<const char*>(bitcode_data), sizeof(bitcode_data));
 	unique_ptr<llvm::MemoryBuffer> buf(llvm::MemoryBuffer::getMemBuffer(bitcode_data_ref, "", false));
-	llvm::ErrorOr<llvm::Module*> src = llvm::parseBitcodeFile(buf.get(), dest->getContext());
+	llvm::ErrorOr<llvm::Module*> src = llvm::parseBitcodeFile(buf.get(), context);
 
-	// Link module into main program
-	if (!src || llvm::Linker::LinkModules(dest, *src, llvm::Linker::DestroySource, nullptr))
+	if (!src)
 	{
-		// Failed to link runtime (should never happen)
-		std::cerr << "fatal error: failed to load lcool runtime bitcode file" << std::endl;
+		// Failed to load runtime (should never happen)
+		std::cerr << "fatal error: failed to load lcool runtime bitcode file ("
+			<< src.getError().message() << ")" << std::endl;
 		std::abort();
 	}
+
+	return unique_ptr<llvm::Module>(*src);
 }
 
-void lcool::load_builtins(lcool::cool_program& program)
+void lcool::builtins_register(lcool::cool_program& program)
 {
 	llvm::Module* module = program.module();
-
-	// Link in runtime library
-	link_runtime(module);
 
 	// Register builtin classes
 	llvm::IntegerType* int1 = llvm::IntegerType::get(module->getContext(), 1);

@@ -18,14 +18,27 @@
 #ifndef LCOOL_BUILTINS_HPP
 #define LCOOL_BUILTINS_HPP
 
+#include <llvm/IR/Module.h>
+#include "smart_ptr.hpp"
+
 namespace lcool
 {
 	class cool_program;
 
 	/**
-	 * Loads all the builtin classes to the given program structure
+	 * Loads the lcool runtime into a new LLVM Module
+	 *
+	 * @param context LLVM context to creat Module in
 	 */
-	void load_builtins(cool_program& program);
+	unique_ptr<llvm::Module> builtins_load_bitfile(llvm::LLVMContext& context);
+
+	/**
+	 * Registers the builtin classes into a cool_program
+	 *
+	 * The program's module must already contain the LLVM definitions for the
+	 * builtin classes (which you can get using builtins_load_bitfile)
+	 */
+	void builtins_register(cool_program& program);
 }
 
 #endif
