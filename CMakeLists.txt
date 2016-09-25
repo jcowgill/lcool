@@ -22,9 +22,9 @@ else()
 endif()
 
 # Validate LLVM version
-if(LLVM_VERSION VERSION_LESS 3.5)
+if(LLVM_VERSION VERSION_LESS 3.8)
 	message(FATAL_ERROR "You need LLVM >= 3.5 to build ${CMAKE_PROJECT_NAME}")
-elseif(NOT LLVM_VERSION VERSION_LESS 3.6)
+elseif(NOT LLVM_VERSION VERSION_LESS 3.9)
 	message(WARNING "LLVM ${LLVM_VERSION} has not been tested")
 endif()
 
