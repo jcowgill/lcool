@@ -27,8 +27,6 @@ env:
   global:
     - LDFLAGS=-Wl,--as-needed
   matrix:
-    - LLVM_VERSION=3.5
-    - LLVM_VERSION=3.6
     - LLVM_VERSION=3.8
 
 # Main build scripts
