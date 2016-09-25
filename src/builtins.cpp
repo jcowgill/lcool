@@ -75,7 +75,7 @@ namespace
 			assert(func != nullptr);
 
 			// Create and insert method
-			auto result = _methods.emplace(name, make_unique<cool_method>(std::move(slot), func));
+			auto result = _methods.emplace(name, lcool::make_unique<cool_method>(std::move(slot), func));
 			assert(result.second);
 		}
 
@@ -186,8 +186,8 @@ unique_ptr<llvm::Module> lcool::builtins_load_bitfile(llvm::LLVMContext& context
 {
 	// Parse bitcode_data to get an LLVM module
 	llvm::StringRef bitcode_data_ref(reinterpret_cast<const char*>(bitcode_data), sizeof(bitcode_data));
-	unique_ptr<llvm::MemoryBuffer> buf(llvm::MemoryBuffer::getMemBuffer(bitcode_data_ref, "", false));
-	llvm::ErrorOr<llvm::Module*> src = llvm::parseBitcodeFile(buf.get(), context);
+	llvm::MemoryBufferRef buf(bitcode_data_ref, "lcool_runtime");
+	llvm::ErrorOr<unique_ptr<llvm::Module>> src = llvm::parseBitcodeFile(buf, context);
 
 	if (!src)
 	{
@@ -197,7 +197,7 @@ unique_ptr<llvm::Module> lcool::builtins_load_bitfile(llvm::LLVMContext& context
 		std::abort();
 	}
 
-	return unique_ptr<llvm::Module>(*src);
+	return std::move(*src);
 }
 
 void lcool::builtins_register(lcool::cool_program& program)

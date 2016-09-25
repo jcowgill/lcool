@@ -128,7 +128,7 @@
 @Object$vtable = hidden constant %Object$vtabletype
 {
 	%Object$vtabletype*        null,
-	i32                        ptrtoint (%Object* getelementptr (%Object* null, i32 1) to i32),
+	i32                        ptrtoint (%Object* getelementptr (%Object, %Object* null, i32 1) to i32),
 	%String*                   bitcast ({ %Object, i32, [6 x i8] }* @Object$name to %String*),
 	void (%Object*)*           @noop_construct,
 	void (%Object*, %Object*)* @noop_copyconstruct,
@@ -143,7 +143,7 @@
 	%Object$vtabletype
 	{
 		%Object$vtabletype*        @Object$vtable,
-		i32                        ptrtoint (%IO* getelementptr (%IO* null, i32 1) to i32),
+		i32                        ptrtoint (%IO* getelementptr (%IO, %IO* null, i32 1) to i32),
 		%String*                   bitcast ({ %Object, i32, [2 x i8] }* @IO$name to %String*),
 		void (%Object*)*           @noop_construct,
 		void (%Object*, %Object*)* @noop_copyconstruct,
@@ -162,7 +162,7 @@
 @String$vtable = hidden constant %Object$vtabletype
 {
 	%Object$vtabletype*        @Object$vtable,
-	i32                        ptrtoint (%String* getelementptr (%String* null, i32 1) to i32),
+	i32                        ptrtoint (%String* getelementptr (%String, %String* null, i32 1) to i32),
 	%String*                   bitcast ({ %Object, i32, [6 x i8] }* @String$name to %String*),
 	void (%Object*)*           @noop_construct,
 	void (%Object*, %Object*)* @noop_copyconstruct,
@@ -175,7 +175,7 @@
 @Int$vtable = hidden constant %Object$vtabletype
 {
 	%Object$vtabletype*        @Object$vtable,
-	i32                        ptrtoint (%Int* getelementptr (%Int* null, i32 1) to i32),
+	i32                        ptrtoint (%Int* getelementptr (%Int, %Int* null, i32 1) to i32),
 	%String*                   bitcast ({ %Object, i32, [3 x i8] }* @Int$name to %String*),
 	void (%Object*)*           @noop_construct,
 	void (%Object*, %Object*)* @noop_copyconstruct,
@@ -188,7 +188,7 @@
 @Bool$vtable = hidden constant %Object$vtabletype
 {
 	%Object$vtabletype*        @Object$vtable,
-	i32                        ptrtoint (%Bool* getelementptr (%Bool* null, i32 1) to i32),
+	i32                        ptrtoint (%Bool* getelementptr (%Bool, %Bool* null, i32 1) to i32),
 	%String*                   bitcast ({ %Object, i32, [4 x i8] }* @Bool$name to %String*),
 	void (%Object*)*           @noop_construct,
 	void (%Object*, %Object*)* @noop_copyconstruct,
@@ -241,7 +241,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
 define hidden fastcc void @abort_with_msg(i8* %msg) noreturn
 {
 	call i32 @puts(i8* %msg)
-	%stderr = load %IO$File** @stderr
+	%stderr = load %IO$File*, %IO$File** @stderr
 	call i32 @fflush(%IO$File* %stderr)
 	call void @abort()
 	unreachable
@@ -251,8 +251,8 @@ define hidden fastcc void @abort_with_msg(i8* %msg) noreturn
 define hidden fastcc %Object* @alloc_object(%Object$vtabletype* %vtable)
 {
 	; Get size and call alloc_object_with_size
-	%size_ptr = getelementptr inbounds %Object$vtabletype* %vtable, i32 0, i32 1
-	%size = load i32* %size_ptr
+	%size_ptr = getelementptr inbounds %Object$vtabletype, %Object$vtabletype* %vtable, i32 0, i32 1
+	%size = load i32, i32* %size_ptr
 
 	%result = tail call fastcc %Object* @alloc_object_with_size(i32 %size, %Object$vtabletype* %vtable)
 	ret %Object* %result
@@ -272,17 +272,17 @@ NotNull:
 	; Initialize object and return
 	%ptr_as_object = bitcast i8* %ptr to %Object*
 
-	%vtable_ptr = getelementptr inbounds %Object* %ptr_as_object, i32 0, i32 0
+	%vtable_ptr = getelementptr inbounds %Object, %Object* %ptr_as_object, i32 0, i32 0
 	store %Object$vtabletype* %vtable, %Object$vtabletype** %vtable_ptr
 
-	%refcount_ptr = getelementptr inbounds %Object* %ptr_as_object, i32 0, i32 1
+	%refcount_ptr = getelementptr inbounds %Object, %Object* %ptr_as_object, i32 0, i32 1
 	store i32 1, i32* %refcount_ptr
 
 	ret %Object* %ptr_as_object
 
 Null:
 	; Abort out of memory
-	call fastcc void @abort_with_msg(i8* getelementptr inbounds ([14 x i8]* @err_oom, i32 0, i32 0))
+	call fastcc void @abort_with_msg(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @err_oom, i32 0, i32 0))
 	unreachable
 }
 
@@ -295,7 +295,7 @@ define hidden fastcc %String* @alloc_string(i32 %size)
 
 DoAllocate:
 	; Get size of new object
-	%empty_size = ptrtoint %String* getelementptr (%String* null, i32 1) to i32
+	%empty_size = ptrtoint %String* getelementptr (%String, %String* null, i32 1) to i32
 	%obj_size = add nuw i32 %size, %empty_size
 
 	; Allocate object
@@ -303,13 +303,13 @@ DoAllocate:
 	%str = bitcast %Object* %obj to %String*
 
 	; Store size of string
-	%len_ptr = getelementptr inbounds %String* %str, i32 0, i32 1
+	%len_ptr = getelementptr inbounds %String, %String* %str, i32 0, i32 1
 	store i32 %size, i32* %len_ptr
 	ret %String* %str
 
 Empty:
 	; Return the empty string
-	%empty_object = getelementptr inbounds %String* @String$empty, i32 0, i32 0
+	%empty_object = getelementptr inbounds %String, %String* @String$empty, i32 0, i32 0
 	call fastcc void @refcount_inc(%Object* %empty_object)
 	ret %String* @String$empty
 }
@@ -318,8 +318,8 @@ Empty:
 define hidden fastcc i1 @instance_of(%Object* %this, %Object$vtabletype* %cls) readonly
 {
 	; Get object vtable
-	%vtable1ptr = getelementptr inbounds %Object* %this, i32 0, i32 0
-	%vtable1 = load %Object$vtabletype** %vtable1ptr
+	%vtable1ptr = getelementptr inbounds %Object, %Object* %this, i32 0, i32 0
+	%vtable1 = load %Object$vtabletype*, %Object$vtabletype** %vtable1ptr
 	br label %LoopStart
 
 LoopStart:
@@ -330,8 +330,8 @@ LoopStart:
 
 LoopCheckCls:
 	; Get next vtable to check
-	%next_vtable_ptr = getelementptr inbounds %Object$vtabletype* %current_vtable, i32 0, i32 0
-	%next_vtable = load %Object$vtabletype** %next_vtable_ptr
+	%next_vtable_ptr = getelementptr inbounds %Object$vtabletype, %Object$vtabletype* %current_vtable, i32 0, i32 0
+	%next_vtable = load %Object$vtabletype*, %Object$vtabletype** %next_vtable_ptr
 
 	; Pass if the current vtable is the one we want
 	%is_the_one = icmp eq %Object$vtabletype* %current_vtable, %cls
@@ -351,8 +351,8 @@ define hidden fastcc %Object* @new_object(%Object$vtabletype* %vtable)
 	%new = call fastcc %Object* @alloc_object(%Object$vtabletype* %vtable)
 
 	; Call constructor
-	%construct_ptr = getelementptr inbounds %Object$vtabletype* %vtable, i32 0, i32 3
-	%construct = load void (%Object*)** %construct_ptr
+	%construct_ptr = getelementptr inbounds %Object$vtabletype, %Object$vtabletype* %vtable, i32 0, i32 3
+	%construct = load void (%Object*)*, void (%Object*)** %construct_ptr
 	call fastcc void %construct(%Object* %new)
 	ret %Object* %new
 }
@@ -379,7 +379,7 @@ NotNull:
 	ret void
 
 Null:
-	call fastcc void @abort_with_msg(i8* getelementptr inbounds ([27 x i8]* @err_null, i32 0, i32 0))
+	call fastcc void @abort_with_msg(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @err_null, i32 0, i32 0))
 	unreachable
 }
 
@@ -391,8 +391,8 @@ define hidden fastcc void @refcount_inc(%Object* %this) inlinehint
 	br i1 %is_null, label %Null, label %NotNull
 
 NotNull:
-	%refcount_ptr = getelementptr inbounds %Object* %this, i32 0, i32 1
-	%refcount_old = load i32* %refcount_ptr
+	%refcount_ptr = getelementptr inbounds %Object, %Object* %this, i32 0, i32 1
+	%refcount_old = load i32, i32* %refcount_ptr
 	%refcount_new = add nuw i32 %refcount_old, 1
 	store i32 %refcount_new, i32* %refcount_ptr
 	ret void
@@ -410,17 +410,17 @@ define hidden fastcc void @refcount_dec(%Object* %this) inlinehint
 
 NotNull:
 	; Get refcount and see if we should destroy it
-	%refcount_ptr = getelementptr inbounds %Object* %this, i32 0, i32 1
-	%refcount_old = load i32* %refcount_ptr
+	%refcount_ptr = getelementptr inbounds %Object, %Object* %this, i32 0, i32 1
+	%refcount_old = load i32, i32* %refcount_ptr
 	%is_garbage = icmp ule i32 %refcount_old, 1
 	br i1 %is_garbage, label %Garbage, label %Decrement
 
 Garbage:
 	; Call its destructor
-	%vtable_ptr = getelementptr inbounds %Object* %this, i32 0, i32 0
-	%vtable = load %Object$vtabletype** %vtable_ptr
-	%destroy_ptr = getelementptr inbounds %Object$vtabletype* %vtable, i32 0, i32 5
-	%destroy = load void (%Object*)** %destroy_ptr
+	%vtable_ptr = getelementptr inbounds %Object, %Object* %this, i32 0, i32 0
+	%vtable = load %Object$vtabletype*, %Object$vtabletype** %vtable_ptr
+	%destroy_ptr = getelementptr inbounds %Object$vtabletype, %Object$vtabletype* %vtable, i32 0, i32 5
+	%destroy = load void (%Object*)*, void (%Object*)** %destroy_ptr
 	tail call fastcc void %destroy(%Object* %this)
 	ret void
 
@@ -445,7 +445,7 @@ NotZero:
 	ret void
 
 Zero:
-	call fastcc void @abort_with_msg(i8* getelementptr inbounds ([17 x i8]* @err_div_zero, i32 0, i32 0))
+	call fastcc void @abort_with_msg(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @err_div_zero, i32 0, i32 0))
 	unreachable
 }
 
@@ -460,7 +460,7 @@ define hidden fastcc void @Object$destroy(%Object* %this)
 ; Prints an error message and calls abort()
 define hidden fastcc %Object* @Object.abort(%Object* %this) noreturn
 {
-	call fastcc void @abort_with_msg(i8* getelementptr inbounds ([22 x i8]* @err_abort, i32 0, i32 0))
+	call fastcc void @abort_with_msg(i8* getelementptr inbounds ([22 x i8], [22 x i8]* @err_abort, i32 0, i32 0))
 	unreachable
 }
 
@@ -468,8 +468,8 @@ define hidden fastcc %Object* @Object.abort(%Object* %this) noreturn
 define hidden fastcc %Object* @Object.copy(%Object* %this)
 {
 	; Get the vtable
-	%vtable_ptr = getelementptr inbounds %Object* %this, i32 0, i32 0
-	%vtable = load %Object$vtabletype** %vtable_ptr
+	%vtable_ptr = getelementptr inbounds %Object, %Object* %this, i32 0, i32 0
+	%vtable = load %Object$vtabletype*, %Object$vtabletype** %vtable_ptr
 
 	; Strings, Ints and Bools would require special handling but since they're
 	;  immutable, we can just return the uncopied object
@@ -485,8 +485,8 @@ DoCopy:
 	%new = call fastcc %Object* @alloc_object(%Object$vtabletype* %vtable)
 
 	; Call copy constructor
-	%construct_ptr = getelementptr inbounds %Object$vtabletype* %vtable, i32 0, i32 4
-	%construct = load void (%Object*, %Object*)** %construct_ptr
+	%construct_ptr = getelementptr inbounds %Object$vtabletype, %Object$vtabletype* %vtable, i32 0, i32 4
+	%construct = load void (%Object*, %Object*)*, void (%Object*, %Object*)** %construct_ptr
 	call fastcc void %construct(%Object* %new, %Object* %this)
 	ret %Object* %new
 
@@ -498,14 +498,14 @@ RetThis:
 define hidden fastcc %String* @Object.type_name(%Object* %this)
 {
 	; Extract type_name from vtable
-	%vtable_ptr = getelementptr inbounds %Object* %this, i32 0, i32 0
-	%vtable = load %Object$vtabletype** %vtable_ptr
+	%vtable_ptr = getelementptr inbounds %Object, %Object* %this, i32 0, i32 0
+	%vtable = load %Object$vtabletype*, %Object$vtabletype** %vtable_ptr
 
-	%type_name_ptr = getelementptr inbounds %Object$vtabletype* %vtable, i32 0, i32 2
-	%type_name = load %String** %type_name_ptr
+	%type_name_ptr = getelementptr inbounds %Object$vtabletype, %Object$vtabletype* %vtable, i32 0, i32 2
+	%type_name = load %String*, %String** %type_name_ptr
 
 	; Increment refcount on string
-	%type_name_obj = getelementptr inbounds %String* %type_name, i32 0, i32 0
+	%type_name_obj = getelementptr inbounds %String, %String* %type_name, i32 0, i32 0
 	call fastcc void @refcount_inc(%Object* %type_name_obj)
 
 	; Return final string
@@ -517,14 +517,14 @@ define hidden fastcc %IO* @IO.out_string(%IO* %this, %String* %value)
 {
 	; Get string length and data pointer
 	%str_len = call fastcc i32 @String.length(%String* %value)
-	%str_data = getelementptr inbounds %String* %value, i32 0, i32 2, i32 0
+	%str_data = getelementptr inbounds %String, %String* %value, i32 0, i32 2, i32 0
 
 	; Call printf
-	%format = getelementptr inbounds [5 x i8]* @format_str, i32 0, i32 0
-	call i32 (i8*, ...)* @printf(i8* %format, i32 %str_len, i8* %str_data)
+	%format = getelementptr inbounds [5 x i8], [5 x i8]* @format_str, i32 0, i32 0
+	call i32 (i8*, ...) @printf(i8* %format, i32 %str_len, i8* %str_data)
 
 	; Return this
-	%this_obj = getelementptr inbounds %IO* %this, i32 0, i32 0
+	%this_obj = getelementptr inbounds %IO, %IO* %this, i32 0, i32 0
 	call fastcc void @refcount_inc(%Object* %this_obj)
 	ret %IO* %this
 }
@@ -533,11 +533,11 @@ define hidden fastcc %IO* @IO.out_string(%IO* %this, %String* %value)
 define hidden fastcc %IO* @IO.out_int(%IO* %this, i32 %value)
 {
 	; Call printf
-	%format = getelementptr inbounds [3 x i8]* @format_int, i32 0, i32 0
-	call i32 (i8*, ...)* @printf(i8* %format, i32 %value)
+	%format = getelementptr inbounds [3 x i8], [3 x i8]* @format_int, i32 0, i32 0
+	call i32 (i8*, ...) @printf(i8* %format, i32 %value)
 
 	; Return this
-	%this_obj = getelementptr inbounds %IO* %this, i32 0, i32 0
+	%this_obj = getelementptr inbounds %IO, %IO* %this, i32 0, i32 0
 	call fastcc void @refcount_inc(%Object* %this_obj)
 	ret %IO* %this
 }
@@ -548,7 +548,7 @@ define hidden fastcc %String* @IO.in_string(%IO* %this)
 	%buf = alloca i8, i32 4096
 
 	; Run fgets
-	%stdin = load %IO$File** @stdin
+	%stdin = load %IO$File*, %IO$File** @stdin
 	%fgets_result = call i8* @fgets(i8* %buf, i32 4096, %IO$File* %stdin)
 
 	; Check for EOF
@@ -561,8 +561,8 @@ MakeString:
 
 	; Erase \n if it is at the end
 	%newline_pos = sub nuw i32 %orig_str_len, 1
-	%newline_ptr = getelementptr inbounds i8* %buf, i32 %newline_pos
-	%newline_char = load i8* %newline_ptr
+	%newline_ptr = getelementptr inbounds i8, i8* %buf, i32 %newline_pos
+	%newline_char = load i8, i8* %newline_ptr
 	%is_newline = icmp eq i8 %newline_char, 10
 
 	%str_len = select i1 %is_newline, i32 %newline_pos, i32 %orig_str_len
@@ -571,14 +571,14 @@ MakeString:
 	%str = call fastcc %String* @alloc_string(i32 %str_len)
 
 	; Copy string data
-	%str_data_ptr = getelementptr %String* %str, i32 0, i32 2, i32 0
+	%str_data_ptr = getelementptr %String, %String* %str, i32 0, i32 2, i32 0
 	call void @llvm.memcpy.p0i8.p0i8.i32(i8* %str_data_ptr, i8* %buf, i32 %str_len, i32 0, i1 0)
 
 	ret %String* %str
 
 Eof:
 	; Return the empty string
-	%empty_object = getelementptr inbounds %String* @String$empty, i32 0, i32 0
+	%empty_object = getelementptr inbounds %String, %String* @String$empty, i32 0, i32 0
 	call fastcc void @refcount_inc(%Object* %empty_object)
 	ret %String* @String$empty
 }
@@ -589,7 +589,7 @@ define hidden fastcc i32 @IO.in_int(%IO* %this)
 	%buf = alloca i8, i32 4096
 
 	; Run fgets
-	%stdin = load %IO$File** @stdin
+	%stdin = load %IO$File*, %IO$File** @stdin
 	%fgets_result = call i8* @fgets(i8* %buf, i32 4096, %IO$File* %stdin)
 
 	; Check for EOF
@@ -613,7 +613,7 @@ define hidden fastcc %Object* @Int$box(i32 %value)
 
 	; Store value into it
 	%new_int = bitcast %Object* %new to %Int*
-	%value_ptr = getelementptr inbounds %Int* %new_int, i32 0, i32 1
+	%value_ptr = getelementptr inbounds %Int, %Int* %new_int, i32 0, i32 1
 	store i32 %value, i32* %value_ptr
 
 	ret %Object* %new
@@ -627,7 +627,7 @@ define hidden fastcc %Object* @Bool$box(i1 %value)
 
 	; Store value into it
 	%new_bool = bitcast %Object* %new to %Bool*
-	%value_ptr = getelementptr inbounds %Bool* %new_bool, i32 0, i32 1
+	%value_ptr = getelementptr inbounds %Bool, %Bool* %new_bool, i32 0, i32 1
 	store i1 %value, i1* %value_ptr
 
 	ret %Object* %new
@@ -638,8 +638,8 @@ define hidden fastcc i32 @Int$unbox(%Object* %value) inlinehint
 {
 	; Load directly from object
 	%value_as_int_ptr = bitcast %Object* %value to %Int*
-	%value_ptr = getelementptr inbounds %Int* %value_as_int_ptr, i32 0, i32 1
-	%result = load i32* %value_ptr
+	%value_ptr = getelementptr inbounds %Int, %Int* %value_as_int_ptr, i32 0, i32 1
+	%result = load i32, i32* %value_ptr
 	ret i32 %result
 }
 
@@ -648,8 +648,8 @@ define hidden fastcc i1 @Bool$unbox(%Object* %value) inlinehint
 {
 	; Load directly from object
 	%value_as_bool_ptr = bitcast %Object* %value to %Bool*
-	%value_ptr = getelementptr inbounds %Bool* %value_as_bool_ptr, i32 0, i32 1
-	%result = load i1* %value_ptr
+	%value_ptr = getelementptr inbounds %Bool, %Bool* %value_as_bool_ptr, i32 0, i32 1
+	%result = load i1, i1* %value_ptr
 	ret i1 %result
 }
 
@@ -657,12 +657,12 @@ define hidden fastcc i1 @Bool$unbox(%Object* %value) inlinehint
 define hidden fastcc i32 @String.length(%String* %this) inlinehint
 {
 	; Test for null string
-	%this_as_object = getelementptr inbounds %String* %this, i32 0, i32 0
+	%this_as_object = getelementptr inbounds %String, %String* %this, i32 0, i32 0
 	call fastcc void @null_check(%Object* %this_as_object)
 
 	; Return length
-	%length_ptr = getelementptr inbounds %String* %this, i32 0, i32 1
-	%length = load i32* %length_ptr
+	%length_ptr = getelementptr inbounds %String, %String* %this, i32 0, i32 1
+	%length = load i32, i32* %length_ptr
 	ret i32 %length
 }
 
@@ -670,26 +670,26 @@ define hidden fastcc i32 @String.length(%String* %this) inlinehint
 define hidden fastcc %String* @String.concat(%String* %this, %String* %other)
 {
 	; Test if any inputs are null
-	%this_as_object = getelementptr inbounds %String* %this, i32 0, i32 0
+	%this_as_object = getelementptr inbounds %String, %String* %this, i32 0, i32 0
 	call fastcc void @null_check(%Object* %this_as_object)
-	%other_as_object = getelementptr inbounds %String* %other, i32 0, i32 0
+	%other_as_object = getelementptr inbounds %String, %String* %other, i32 0, i32 0
 	call fastcc void @null_check(%Object* %other_as_object)
 
 	; Get length of new string
-	%this_len_ptr = getelementptr inbounds %String* %this, i32 0, i32 1
-	%this_len = load i32* %this_len_ptr
-	%other_len_ptr = getelementptr inbounds %String* %other, i32 0, i32 1
-	%other_len = load i32* %other_len_ptr
+	%this_len_ptr = getelementptr inbounds %String, %String* %this, i32 0, i32 1
+	%this_len = load i32, i32* %this_len_ptr
+	%other_len_ptr = getelementptr inbounds %String, %String* %other, i32 0, i32 1
+	%other_len = load i32, i32* %other_len_ptr
 	%new_len = add nuw i32 %this_len, %other_len
 
 	; Allocate string
 	%new = call fastcc %String* @alloc_string(i32 %new_len)
 
 	; Calculate data pointers
-	%new_data_ptr   = getelementptr %String* %new, i32 0, i32 2, i32 0
-	%new_data_ptr2  = getelementptr i8* %new_data_ptr, i32 %this_len
-	%this_data_ptr  = getelementptr %String* %this, i32 0, i32 2, i32 0
-	%other_data_ptr = getelementptr %String* %other, i32 0, i32 2, i32 0
+	%new_data_ptr   = getelementptr %String, %String* %new, i32 0, i32 2, i32 0
+	%new_data_ptr2  = getelementptr i8, i8* %new_data_ptr, i32 %this_len
+	%this_data_ptr  = getelementptr %String, %String* %this, i32 0, i32 2, i32 0
+	%other_data_ptr = getelementptr %String, %String* %other, i32 0, i32 2, i32 0
 
 	; Copy data
 	call void @llvm.memcpy.p0i8.p0i8.i32(i8* %new_data_ptr,  i8* %this_data_ptr,  i32 %this_len,  i32 0, i1 0)
@@ -702,12 +702,12 @@ define hidden fastcc %String* @String.concat(%String* %this, %String* %other)
 define hidden fastcc %String* @String.substr(%String* %this, i32 %i, i32 %l)
 {
 	; Test for null string
-	%this_as_object = getelementptr inbounds %String* %this, i32 0, i32 0
+	%this_as_object = getelementptr inbounds %String, %String* %this, i32 0, i32 0
 	call fastcc void @null_check(%Object* %this_as_object)
 
 	; Get original string length
-	%this_len_ptr = getelementptr inbounds %String* %this, i32 0, i32 1
-	%this_len = load i32* %this_len_ptr
+	%this_len_ptr = getelementptr inbounds %String, %String* %this, i32 0, i32 1
+	%this_len = load i32, i32* %this_len_ptr
 
 	; Test for various bounds and special cases
 	%is_empty = icmp eq i32 %l, 0
@@ -726,24 +726,24 @@ Bounds3:
 Normal:
 	; Normal substring operation - allocate and copy data
 	%new = call fastcc %String* @alloc_string(i32 %l)
-	%new_data_ptr = getelementptr %String* %new, i32 0, i32 2, i32 0
-	%old_data_ptr = getelementptr %String* %this, i32 0, i32 2, i32 %i
+	%new_data_ptr = getelementptr %String, %String* %new, i32 0, i32 2, i32 0
+	%old_data_ptr = getelementptr %String, %String* %this, i32 0, i32 2, i32 %i
 	call void @llvm.memcpy.p0i8.p0i8.i32(i8* %new_data_ptr, i8* %old_data_ptr, i32 %l, i32 0, i1 0)
 	ret %String* %new
 
 Self:
 	; Return this with no changes
-	%this_object = getelementptr inbounds %String* %this, i32 0, i32 0
+	%this_object = getelementptr inbounds %String, %String* %this, i32 0, i32 0
 	call fastcc void @refcount_inc(%Object* %this_object)
 	ret %String* %this
 
 Empty:
 	; Return the empty string
-	%empty_object = getelementptr inbounds %String* @String$empty, i32 0, i32 0
+	%empty_object = getelementptr inbounds %String, %String* @String$empty, i32 0, i32 0
 	call fastcc void @refcount_inc(%Object* %empty_object)
 	ret %String* @String$empty
 
 RangeError:
-	call fastcc void @abort_with_msg(i8* getelementptr inbounds ([35 x i8]* @err_range, i32 0, i32 0))
+	call fastcc void @abort_with_msg(i8* getelementptr inbounds ([35 x i8], [35 x i8]* @err_range, i32 0, i32 0))
 	unreachable
 }

@@ -376,7 +376,7 @@ namespace lcool
 		template <typename T, typename... Params>
 		T* insert_class(Params... params)
 		{
-			return static_cast<T*>(insert_class(make_unique<T>(params...)));
+			return static_cast<T*>(insert_class(lcool::make_unique<T>(params...)));
 		}
 
 		/**

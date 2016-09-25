@@ -739,14 +739,14 @@ void gen_copy_constructor(cool_program& output, cool_class* cls)
 	builder.SetInsertPoint(llvm::BasicBlock::Create(context, "", func));
 
 	// Get this and other pointers
-	llvm::Value* pthis_obj = func->arg_begin();
-	llvm::Value* other_obj = ++func->arg_begin();
+	llvm::Value* pthis_obj = &func->getArgumentList().front();
+	llvm::Value* other_obj = &*(func->getArgumentList().begin()++);
 	llvm::Value* pthis = cls->downcast(builder, pthis_obj);
 	llvm::Value* other = cls->downcast(builder, other_obj);
 
 	// Call parent copy constructor
 	llvm::Function* parent_func = cls->parent()->copy_constructor();
-	auto call_inst = builder.CreateCall2(parent_func, pthis_obj, other_obj);
+	auto call_inst = builder.CreateCall(parent_func, { pthis_obj, other_obj });
 	call_inst->setCallingConv(llvm::CallingConv::Fast);
 
 	// Copy each attribute
@@ -775,7 +775,7 @@ void gen_destructor(cool_program& output, cool_class* cls)
 	builder.SetInsertPoint(llvm::BasicBlock::Create(context, "", func));
 
 	// Get object to destroy and downcast it
-	llvm::Value* to_destroy_obj = func->arg_begin();
+	llvm::Value* to_destroy_obj = &func->getArgumentList().front();
 	llvm::Value* to_destroy = cls->downcast(builder, to_destroy_obj);
 
 	// Destroy each attribute
@@ -806,12 +806,12 @@ void gen_constructor(const ast::cls& input, cool_program& output, cool_class* cl
 
 	// Add self (which might be used in an initializer)
 	llvm::Value* self_ptr = builder.CreateAlloca(cls->llvm_type());
-	llvm::Value* self = builder.CreateBitCast(func->arg_begin(), cls->llvm_type());
+	llvm::Value* self = builder.CreateBitCast(&func->getArgumentList().front(), cls->llvm_type());
 	builder.CreateStore(self, self_ptr);
 	the_generator.add_argument("self", { self_ptr, cls });
 
 	// Call parent constructor
-	llvm::Value* raw_object = func->arg_begin();
+	llvm::Value* raw_object = &func->getArgumentList().front();
 	builder.SetInsertPoint(user_block);
 	auto call_inst = builder.CreateCall(cls->parent()->constructor(), raw_object);
 	call_inst->setCallingConv(llvm::CallingConv::Fast);

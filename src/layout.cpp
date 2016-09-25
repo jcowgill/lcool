@@ -327,7 +327,7 @@ void process_methods(const ast::cls& ast_cls, user_class* cls, cool_program& out
 				create_fast_function(module, func_type, cls->name() + "." + method.name);
 
 			// Add to list of methods
-			cls->_methods.emplace(method.name, make_unique<cool_method>(std::move(slot), func));
+			cls->_methods.emplace(method.name, lcool::make_unique<cool_method>(std::move(slot), func));
 		}
 		else if (existing_method->declaring_class() == cls)
 		{
@@ -350,7 +350,7 @@ void process_methods(const ast::cls& ast_cls, user_class* cls, cool_program& out
 				cls->name() + "." + method.name);
 
 			// Add method override
-			cls->_methods.emplace(method.name, make_unique<cool_method>(cls, existing_method, func));
+			cls->_methods.emplace(method.name, lcool::make_unique<cool_method>(cls, existing_method, func));
 		}
 	}
 }
@@ -380,7 +380,7 @@ llvm::Constant* create_partial_vtable_init(user_class* top_cls, cool_program& ou
 		auto null_ptr = llvm::ConstantPointerNull::get(top_cls->llvm_type());
 		auto type_i32 = llvm::Type::getInt32Ty(output.module()->getContext());
 		auto one = llvm::ConstantInt::get(type_i32, 1);
-		auto gep_instruction = llvm::ConstantExpr::getGetElementPtr(null_ptr, one);
+		auto gep_instruction = llvm::ConstantExpr::getGetElementPtr(top_cls->llvm_type(), null_ptr, one);
 		auto final_size = llvm::ConstantExpr::getPtrToInt(gep_instruction, type_i32);
 		elements.push_back(final_size);
 
