@@ -214,7 +214,7 @@ declare noalias i8* @malloc(i32) nounwind
 declare void @free(i8*) nounwind
 
 declare i32 @printf(i8*, ...) nounwind
-declare i32 @puts(i8*) nounwind
+declare i32 @fputs(i8*, %IO$File*) nounwind
 declare i8* @fgets(i8*, i32, %IO$File*) nounwind
 declare i32 @fflush(%IO$File*) nounwind
 declare i32 @atoi(i8*) nounwind
@@ -240,9 +240,10 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
 ; Prints a message and calls abort
 define hidden fastcc void @abort_with_msg(i8* %msg) noreturn
 {
-	call i32 @puts(i8* %msg)
+	%stdout = load %IO$File*, %IO$File** @stdout
 	%stderr = load %IO$File*, %IO$File** @stderr
-	call i32 @fflush(%IO$File* %stderr)
+	call i32 @fflush(%IO$File* %stdout)
+	call i32 @fputs(i8* %msg, %IO$File* %stderr)
 	call void @abort()
 	unreachable
 }
