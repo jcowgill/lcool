@@ -15,9 +15,9 @@ and install it, run something like:
 	make install
 
 ## LLVM
-Currently lcool only works with LLVM 3.5. LLVM is detected using CMake's config
+Currently lcool only works with LLVM 3.8. LLVM is detected using CMake's config
 system. If you installed LLVM from your distribution's repository it should work
-(eg on Debian install `llvm-3.5-dev`). If you compiled LLVM manually, you may
+(eg on Debian install `llvm-3.8-dev`). If you compiled LLVM manually, you may
 need to set the `-DCMAKE_PREFIX_PATH` variable to the root of your LLVM
 installation.
 
