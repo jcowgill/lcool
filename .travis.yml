@@ -26,6 +26,7 @@ compiler:
 env:
   global:
     - LDFLAGS=-Wl,--as-needed
+    - CTEST_OUTPUT_ON_FAILURE=1
   matrix:
     - LLVM_VERSION=3.8
 
@@ -42,3 +43,4 @@ before_script:
 
 script:
   - make VERBOSE=1
+  - make VERBOSE=1 test
