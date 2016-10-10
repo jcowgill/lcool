@@ -29,6 +29,7 @@
 #include "test.hpp"
 
 using lcool::test::build_expect;
+using lcool::test::test_error;
 using lcool::test::test_fptr;
 using lcool::test::test_info;
 using lcool::test::test_result;
@@ -211,7 +212,16 @@ test_fptr lcool::test::semantic_input(const char* file);
 // Runs a test and prints the results
 static bool run_test(const std::pair<std::string, test_fptr>& test, const test_info& info)
 {
-	test_result result = test.second(info);
+	test_result result;
+
+	try
+	{
+		result = test.second(info);
+	}
+	catch (const test_error& e)
+	{
+		result = { test_status::error, e.what() };
+	}
 
 	if (result.status == test_status::pass)
 	{

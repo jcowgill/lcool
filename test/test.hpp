@@ -17,6 +17,7 @@
 
 #include <functional>
 #include <map>
+#include <stdexcept>
 #include <string>
 
 namespace lcool
@@ -43,6 +44,16 @@ namespace lcool
 		{
 			// Path to lcoolc executable
 			std::string lcoolc_path;
+		};
+
+		// If thrown from a test, causes the test to error out wit the given msg
+		class test_error : public std::runtime_error
+		{
+		public:
+			test_error(const std::string& msg)
+				: std::runtime_error(msg)
+			{
+			}
 		};
 
 		// Test function type
