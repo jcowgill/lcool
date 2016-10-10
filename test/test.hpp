@@ -51,6 +51,19 @@ namespace lcool
 		// Main list of testcases
 		extern const std::map<std::string, test_fptr> testcases;
 
+		// Expected output form build only tests
+		enum class build_expect
+		{
+			// Good tests expect no errors or warnings
+			good,
+
+			// Warnings tests ecpect the compile to suceed with some warnings
+			warnings,
+
+			// Errors tests expect the compile to fail with some errors
+			errors,
+		};
+
 		// Build only tests
 		//  These tests run the compiler but don't execute the resulting
 		//  program. file refers to the path to the test program. The suffix
@@ -58,16 +71,8 @@ namespace lcool
 		//  to get the warn/error file.
 		//  - parse tests run the lexer/parser only
 		//  - compile tests run the full compile process (to llvm)
-		//  - "good" tests expect no errors or warnings
-		//  - "warn" tests expect the compile to succeed, but may output
-		//    warnings
-		//  - "error" tests expect the compile to fail
-		test_fptr parse_good(const char* file);
-		test_fptr parse_warn(const char* file);
-		test_fptr parse_error(const char* file);
-		test_fptr compile_good(const char* file);
-		test_fptr compile_warn(const char* file);
-		test_fptr compile_error(const char* file);
+		test_fptr parse(const char* file, build_expect expected = build_expect::good);
+		test_fptr compile(const char* file, build_expect expected = build_expect::good);
 
 		// Semantic tests
 		//  These tests compile and run the given program

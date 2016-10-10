@@ -28,6 +28,7 @@
 
 #include "test.hpp"
 
+using lcool::test::build_expect;
 using lcool::test::test_fptr;
 using lcool::test::test_info;
 using lcool::test::test_result;
@@ -37,9 +38,9 @@ using lcool::test::test_status;
 #define MAGIC_ERROR_STATUS 125
 
 // Returns an error test status with errno appended to it
-static test_result test_error_with_errno(const char* prefix)
+static test_result test_error_with_errno(std::string prefix)
 {
-	return { test_status::error, std::string(prefix) + " (" + strerror(errno) + ")" };
+	return { test_status::error, prefix + " (" + strerror(errno) + ")" };
 }
 
 // Reads contents of file desciptor into a string
@@ -60,12 +61,34 @@ static test_result read_fd(int fd)
 	return result;
 }
 
-test_fptr lcool::test::parse_good(const char* name)
+// Reads an entire file into a string
+static test_result read_file(const std::string& filename)
 {
-	const std::string file = std::string(name) + ".cl";
+	int fd = open(filename.c_str(), O_RDONLY);
+	if (fd < 0)
+		return test_error_with_errno(std::string("open ") + filename + ": ");
 
-	return [file](const test_info& info) -> test_result {
-		// Setup pipe for stderr inspection
+	test_result result = read_fd(fd);
+	close(fd);
+	return result;
+}
+
+// Build only test implementation
+static test_fptr build_only_test(const char* name, build_expect expected, const char* lcoolc_option)
+{
+	return [=](const test_info& info) -> test_result {
+		// Read expected output file
+		std::string expected_output;
+		if (expected != build_expect::good)
+		{
+			test_result out_file = read_file(std::string(name) + ".out");
+			if (out_file.status == test_status::error)
+				return out_file;
+
+			expected_output = std::move(out_file.err_msg);
+		}
+
+		// Fork lcoolc process
 		int stderr_pipe[2];
 		if (pipe(stderr_pipe) != 0)
 			return test_error_with_errno("pipe: ");
@@ -99,7 +122,8 @@ test_fptr lcool::test::parse_good(const char* name)
 			close(stderr_pipe[1]);
 
 			// Run lcoolc
-			execl(info.lcoolc_path.c_str(), "--parse", file.c_str(), (char*) NULL);
+			const std::string file_input = std::string(name) + ".cl";
+			execl(info.lcoolc_path.c_str(), lcoolc_option, file_input.c_str(), (char*) NULL);
 			_exit(MAGIC_ERROR_STATUS);
 		}
 
@@ -118,25 +142,36 @@ test_fptr lcool::test::parse_good(const char* name)
 
 		if (WIFEXITED(wstatus))
 		{
+			int expected_exit_status = (expected == build_expect::errors) ? 1 : 0;
+
 			switch (WEXITSTATUS(wstatus))
 			{
 				case 0:
-					// Sucessful exit code, only pass if nothing was printed
-					if (stderr_contents.err_msg != "")
-						stderr_contents.status = test_status::fail;
+				case 1:
+					// Check exit code and fail immediately if it's wrong
+					if (WEXITSTATUS(wstatus) != expected_exit_status)
+						break;
 
-					return stderr_contents;
+					// Compare with output file
+					if (stderr_contents.err_msg != expected_output)
+					{
+						stderr_contents.status = test_status::fail;
+						stderr_contents.err_msg += "== incorrect output - expected:\n";
+						stderr_contents.err_msg += expected_output;
+						return stderr_contents;
+					}
+
+					return { test_status::pass, "" };
 
 				case MAGIC_ERROR_STATUS:
 					// Child errored out in exec
 					return { test_status::error, "exec failed (is the path to lcoolc correct?)" };
-
-				default:
-					// Other exit code
-					stderr_contents.status = test_status::fail;
-					stderr_contents.err_msg += "== exited with status " + std::to_string(WEXITSTATUS(wstatus));
-					return stderr_contents;
 			}
+
+			// Incorrect exit status
+			stderr_contents.status = test_status::fail;
+			stderr_contents.err_msg += "== exited with status " + std::to_string(WEXITSTATUS(wstatus));
+			return stderr_contents;
 		}
 		else if (WIFSIGNALED(wstatus))
 		{
@@ -158,12 +193,17 @@ test_fptr lcool::test::parse_good(const char* name)
 	};
 }
 
+test_fptr lcool::test::parse(const char* name, build_expect expected)
+{
+	return build_only_test(name, expected, "--parse");
+}
+
+test_fptr lcool::test::compile(const char* name, build_expect expected)
+{
+	return build_only_test(name, expected, "-o-");
+}
+
 #if 0
-test_fptr lcool::test::parse_warn(const char* file);
-test_fptr lcool::test::parse_error(const char* file);
-test_fptr lcool::test::compile_good(const char* file);
-test_fptr lcool::test::compile_warn(const char* file);
-test_fptr lcool::test::compile_error(const char* file);
 test_fptr lcool::test::semantic(const char* file);
 test_fptr lcool::test::semantic_input(const char* file);
 #endif

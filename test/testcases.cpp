@@ -19,5 +19,5 @@
 
 const std::map<std::string, lcool::test::test_fptr> lcool::test::testcases
 {
-	{ "hello world", lcool::test::parse_good("../hello") }
+	{ "hello world", lcool::test::parse("../hello") }
 };
