@@ -15,6 +15,7 @@
  * along with LCool.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cassert>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -38,38 +39,119 @@ using lcool::test::test_status;
 // If the child reports this exit code, there was an error during exec
 #define MAGIC_ERROR_STATUS 125
 
-// Returns an error test status with errno appended to it
-static test_result test_error_with_errno(std::string prefix)
+// Retutns a test error with errno appended to it
+static test_error test_error_with_errno(std::string prefix)
 {
-	return { test_status::error, prefix + " (" + strerror(errno) + ")" };
+	return test_error(prefix + " (" + strerror(errno) + ")");
 }
 
-// Reads contents of file desciptor into a string
-//  Returns a pass status with the string, or an error status with the error
-//  message
-static test_result read_fd(int fd)
+namespace
 {
-	test_result result = { test_status::pass, "" };
+	// Class which holds 2 pipe file descriptors
+	class pipe_fds
+	{
+	public:
+		// Creates a new pipe
+		pipe_fds()
+		{
+			if (pipe(_fds) != 0)
+				throw test_error_with_errno("pipe: ");
+		}
+
+		pipe_fds(const pipe_fds&) = delete;
+		pipe_fds& operator=(const pipe_fds&) = delete;
+		~pipe_fds() { close(); }
+
+		int read_fd() const { assert(_fds[0] >= 0); return _fds[0]; }
+		int write_fd() const { assert(_fds[1] >= 0); return _fds[1]; }
+
+		void close() noexcept { close_read(); close_write(); }
+
+		void close_read() noexcept
+		{
+			if (_fds[0] >= 0)
+			{
+				::close(_fds[0]);
+				_fds[0] = -1;
+			}
+		}
+
+		void close_write() noexcept
+		{
+			if (_fds[1] >= 0)
+			{
+				::close(_fds[1]);
+				_fds[1] = -1;
+			}
+		}
+
+	private:
+		int _fds[2];
+	};
+
+	// Class that ensures zombies are not left around when an error occurs
+	class child_reaper
+	{
+	public:
+		explicit child_reaper(pid_t child)
+			: _child(child)
+		{
+		}
+
+		child_reaper(const child_reaper&) = delete;
+		child_reaper& operator=(const child_reaper&) = delete;
+		~child_reaper() { wait(false); }
+
+		int wait(bool throw_on_error = true)
+		{
+			// Only wait once
+			pid_t child = _child;
+			if (child < 0)
+				return -1;
+			_child = -1;
+
+			int wstatus;
+			if (waitpid(child, &wstatus, 0) < 0)
+			{
+				if (throw_on_error)
+					throw test_error_with_errno("waitpid: ");
+				else
+					return -1;
+			}
+
+			return wstatus;
+		}
+
+	private:
+		pid_t _child;
+	};
+}
+
+
+// Reads contents of file desciptor into a string
+static std::string read_fd(int fd)
+{
+	std::string result;
 	char buffer[1024];
 	ssize_t bytes_read;
 
 	while ((bytes_read = read(fd, buffer, sizeof(buffer))) > 0)
-		result.err_msg.append(buffer, bytes_read);
+		result.append(buffer, bytes_read);
 
 	if (bytes_read < 0)
-		return test_error_with_errno("read: ");
+		throw test_error_with_errno("read: ");
 
 	return result;
 }
 
 // Reads an entire file into a string
-static test_result read_file(const std::string& filename)
+static std::string read_file(const std::string& filename)
 {
 	int fd = open(filename.c_str(), O_RDONLY);
 	if (fd < 0)
-		return test_error_with_errno(std::string("open ") + filename + ": ");
+		throw test_error_with_errno(std::string("open ") + filename + ": ");
 
-	test_result result = read_fd(fd);
+	std::string result = read_fd(fd);
 	close(fd);
 	return result;
 }
@@ -81,34 +163,20 @@ static test_fptr build_only_test(const char* name, build_expect expected, const 
 		// Read expected output file
 		std::string expected_output;
 		if (expected != build_expect::good)
-		{
-			test_result out_file = read_file(std::string(name) + ".out");
-			if (out_file.status == test_status::error)
-				return out_file;
-
-			expected_output = std::move(out_file.err_msg);
-		}
+			expected_output = read_file(std::string(name) + ".out");
 
 		// Fork lcoolc process
-		int stderr_pipe[2];
-		if (pipe(stderr_pipe) != 0)
-			return test_error_with_errno("pipe: ");
-
+		pipe_fds stderr_pipe;
 		pid_t child = fork();
 		if (child == -1)
-		{
-			close(stderr_pipe[0]);
-			close(stderr_pipe[1]);
-			return test_error_with_errno("fork: ");
-		}
+			throw test_error_with_errno("fork: ");
 
 		if (child == 0)
 		{
-			// Close old file descriptors
+			// Close old standard file descriptors
 			close(STDIN_FILENO);
 			close(STDOUT_FILENO);
 			close(STDERR_FILENO);
-			close(stderr_pipe[0]);
 
 			// Replace stdin and stdout with /dev/null
 			if (open("/dev/null", O_RDWR) != STDIN_FILENO)
@@ -118,9 +186,9 @@ static test_fptr build_only_test(const char* name, build_expect expected, const 
 				_exit(MAGIC_ERROR_STATUS);
 
 			// Replace stderr with pipe endpoint
-			if (dup(stderr_pipe[1]) != STDERR_FILENO)
+			if (dup(stderr_pipe.write_fd()) != STDERR_FILENO)
 				_exit(MAGIC_ERROR_STATUS);
-			close(stderr_pipe[1]);
+			stderr_pipe.close();
 
 			// Run lcoolc
 			const std::string file_input = std::string(name) + ".cl";
@@ -128,19 +196,15 @@ static test_fptr build_only_test(const char* name, build_expect expected, const 
 			_exit(MAGIC_ERROR_STATUS);
 		}
 
-		// Read contents of stderr and exit status
-		close(stderr_pipe[1]);
-		test_result stderr_contents = read_fd(stderr_pipe[0]);
-		close(stderr_pipe[0]);
+		// Read contents of stderr
+		child_reaper reaper(child);
 
-		int wstatus;
-		if (waitpid(child, &wstatus, 0) < 0)
-			return test_error_with_errno("waitpid: ");
+		stderr_pipe.close_write();
+		std::string stderr_contents = read_fd(stderr_pipe.read_fd());
+		stderr_pipe.close();
 
-		// Handle stderr read errors, now that we've reaped the child
-		if (stderr_contents.status != test_status::pass)
-			return stderr_contents;
-
+		// Wait for child to exit and handle exit status
+		int wstatus = reaper.wait();
 		if (WIFEXITED(wstatus))
 		{
 			int expected_exit_status = (expected == build_expect::errors) ? 1 : 0;
@@ -154,42 +218,38 @@ static test_fptr build_only_test(const char* name, build_expect expected, const 
 						break;
 
 					// Compare with output file
-					if (stderr_contents.err_msg != expected_output)
+					if (stderr_contents != expected_output)
 					{
-						stderr_contents.status = test_status::fail;
-						stderr_contents.err_msg += "== incorrect output - expected:\n";
-						stderr_contents.err_msg += expected_output;
-						return stderr_contents;
+						stderr_contents += "== incorrect output - expected:\n";
+						stderr_contents += expected_output;
+						return { test_status::fail, stderr_contents };
 					}
 
 					return { test_status::pass, "" };
 
 				case MAGIC_ERROR_STATUS:
 					// Child errored out in exec
-					return { test_status::error, "exec failed (is the path to lcoolc correct?)" };
+					throw test_error("exec failed (is the path to lcoolc correct?)");
 			}
 
 			// Incorrect exit status
-			stderr_contents.status = test_status::fail;
-			stderr_contents.err_msg += "== exited with status " + std::to_string(WEXITSTATUS(wstatus));
-			return stderr_contents;
+			stderr_contents += "== exited with status " + std::to_string(WEXITSTATUS(wstatus));
+			return { test_status::fail, stderr_contents };
 		}
 		else if (WIFSIGNALED(wstatus))
 		{
 			// Fatal signal
-			stderr_contents.status = test_status::fail;
-
 			const char* sig_string = strsignal(WTERMSIG(wstatus));
 			if (sig_string == NULL)
-				stderr_contents.err_msg += "== fatal signal " + std::to_string(WTERMSIG(wstatus));
+				stderr_contents += "== fatal signal " + std::to_string(WTERMSIG(wstatus));
 			else
-				stderr_contents.err_msg += "== fatal signal " + std::string(sig_string);
+				stderr_contents += "== fatal signal " + std::string(sig_string);
 
-			return stderr_contents;
+			return { test_status::fail, stderr_contents };
 		}
 		else
 		{
-			return { test_status::error, "unknown waitpid result" };
+			throw test_error("unknown waitpid result");
 		}
 	};
 }
