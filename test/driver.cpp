@@ -47,6 +47,55 @@ static test_error test_error_with_errno(std::string prefix)
 
 namespace
 {
+	// Class which holds a file descriptor (closing it in the destructor)
+	//  This operates very similarly to a unique_ptr
+	class fd_holder
+	{
+	public:
+		// Initialize empty
+		fd_holder() : _fd(-1) {}
+
+		// Initialize with a file descriptor
+		explicit fd_holder(int fd) : _fd(fd) {}
+
+		fd_holder(const fd_holder&) = delete;
+		fd_holder& operator=(const fd_holder&) = delete;
+		~fd_holder() { close(); }
+
+		// Returns true if fd is valid (positive)
+		bool operator bool() const { return _fd >= 0; }
+
+		// Returns the fd stored in the holder
+		int get() const { return _fd; }
+
+		// Releases the fd without closing it - returns old fd
+		int release()
+		{
+			int result = _fd;
+			_fd = -1;
+			return result;
+		}
+
+		// Replace fd, closing the old one
+		void reset(int new_fd)
+		{
+			close();
+			_fd = new_fd;
+		}
+
+		// Closes the fd
+		void close()
+		{
+			if (*this)
+				::close(_fd);
+
+			_fd = -1;
+		}
+
+	private:
+		int _fd;
+	};
+
 	// Class which holds 2 pipe file descriptors
 	class pipe_fds
 	{
@@ -54,39 +103,29 @@ namespace
 		// Creates a new pipe
 		pipe_fds()
 		{
-			if (pipe(_fds) != 0)
+			int fd[2];
+
+			if (pipe(fd) != 0)
 				throw test_error_with_errno("pipe: ");
+
+			_read.reset(fd[0]);
+			_write.reset(fd[1]);
 		}
 
-		pipe_fds(const pipe_fds&) = delete;
-		pipe_fds& operator=(const pipe_fds&) = delete;
-		~pipe_fds() { close(); }
+#if 0
+		int read_fd() const { return _read.get(); }
+		int write_fd() const { return _write.get(); }
+#endif
 
-		int read_fd() const { assert(_fds[0] >= 0); return _fds[0]; }
-		int write_fd() const { assert(_fds[1] >= 0); return _fds[1]; }
+		void close() { close_read(); close_write(); }
+		void close_read() { _read.close(); }
+		void close_write() { _write.close() }
 
-		void close() noexcept { close_read(); close_write(); }
-
-		void close_read() noexcept
-		{
-			if (_fds[0] >= 0)
-			{
-				::close(_fds[0]);
-				_fds[0] = -1;
-			}
-		}
-
-		void close_write() noexcept
-		{
-			if (_fds[1] >= 0)
-			{
-				::close(_fds[1]);
-				_fds[1] = -1;
-			}
-		}
+		int release_read() { return _read.release() }
+		int release_write() { return _write.release() }
 
 	private:
-		int _fds[2];
+		fd_holder _read, _write;
 	};
 
 	// Class that ensures zombies are not left around when an error occurs
@@ -102,11 +141,13 @@ namespace
 		child_reaper& operator=(const child_reaper&) = delete;
 		~child_reaper() { wait(false); }
 
+		pid_t pid() const { return _child; }
+
 		int wait(bool throw_on_error = true)
 		{
 			// Only wait once
 			pid_t child = _child;
-			if (child < 0)
+			if (child <= 0)
 				return -1;
 			_child = -1;
 
@@ -167,11 +208,11 @@ static test_fptr build_only_test(const char* name, build_expect expected, const 
 
 		// Fork lcoolc process
 		pipe_fds stderr_pipe;
-		pid_t child = fork();
-		if (child == -1)
+		child_reaper child { fork() };
+		if (child.pid() < 0)
 			throw test_error_with_errno("fork: ");
 
-		if (child == 0)
+		if (child.pid() == 0)
 		{
 			// Close old standard file descriptors
 			close(STDIN_FILENO);
@@ -197,14 +238,12 @@ static test_fptr build_only_test(const char* name, build_expect expected, const 
 		}
 
 		// Read contents of stderr
-		child_reaper reaper(child);
-
 		stderr_pipe.close_write();
 		std::string stderr_contents = read_fd(stderr_pipe.read_fd());
 		stderr_pipe.close();
 
 		// Wait for child to exit and handle exit status
-		int wstatus = reaper.wait();
+		int wstatus = child.wait();
 		if (WIFEXITED(wstatus))
 		{
 			int expected_exit_status = (expected == build_expect::errors) ? 1 : 0;
@@ -264,10 +303,142 @@ test_fptr lcool::test::compile(const char* name, build_expect expected)
 	return build_only_test(name, expected, "-o-");
 }
 
-#if 0
-test_fptr lcool::test::semantic(const char* file);
-test_fptr lcool::test::semantic_input(const char* file);
-#endif
+test_fptr lcool::test::semantic(const char* name, bool with_input)
+{
+	return [=](const test_info& info) -> test_result {
+		// Read expected output file
+		std::string expected_output;
+		if (expected != build_expect::good)
+			expected_output = read_file(std::string(name) + ".out");
+
+		// Open data input file so we can give a decent error if it doesn't exist
+		std::string in_filename;
+		if (with_input)
+			in_filename = std::string(name) + ".in";
+		else
+			in_filename = "/dev/null";
+
+		fd_holder input_file_fd { open(in_filename.c_str(), O_RDONLY) };
+		if (!input_file_fd)
+			return test_error_with_errno(std::string("open ") + filename + ": ");
+
+		// Fork pipeline
+		//  The pipeline looks like this:
+		//   lcoolc 3| lli /dev/fd/3 < input_file | collector
+		//   - We need to pass 2 streams into lli so we use the 3rd fd
+		//   - The purpose of the collector process is to buffer stdout so we
+		//     can read stderr completely first (otherwise we might deadlock)
+		pipe_fds stderr_pipe, bytecode_pipe, collector_pipe, stdout_pipe;
+
+		pid_t lcoolc_child = fork();
+		if (lcoolc_child < 0)
+			throw test_error_with_errno("fork: ");
+
+		if (lcoolc_child == 0)
+		{
+			// lcoolc child
+			//  stdin = input_file_fd, stdout = bytecode_pipe
+			close(STDIN_FILENO);
+			close(STDOUT_FILENO);
+			close(STDERR_FILENO);
+
+			if (dup(input_file_fd.release()) != STDIN_FILENO)
+				_exit(MAGIC_ERROR_STATUS);
+			if (dup(bytecode_pipe.release_write()) != STDOUT_FILENO)
+				_exit(MAGIC_ERROR_STATUS);
+			if (dup(stderr_pipe.release_write()) != STDERR_FILENO)
+				_exit(MAGIC_ERROR_STATUS);
+
+			stderr_pipe.close();
+			bytecode_pipe.close();
+			collector_pipe.close();
+			stdout_pipe.close();
+
+			// Run lcoolc
+			const std::string file_input = std::string(name) + ".cl";
+			execl(info.lcoolc_path.c_str(), lcoolc_option, file_input.c_str(), (char*) NULL);
+			_exit(MAGIC_ERROR_STATUS);
+		}
+
+		pid_t lli_child = fork();
+
+		pid_t collector_child = fork();
+#error todo around here
+		if(collector_child == 0)
+		{
+			// The collector closes all pipes, then cats the output of lli back
+			// to the parent
+			stderr_pipe.close();
+			bytecode_pipe.close();
+			collector_pipe.close_write();
+			stdout_pipe.close_read();
+		}
+
+		// Read contents of stderr and exit status
+		close(stderr_pipe[1]);
+		test_result stderr_contents = read_fd(stderr_pipe[0]);
+		close(stderr_pipe[0]);
+
+		int wstatus;
+		if (waitpid(child, &wstatus, 0) < 0)
+			return test_error_with_errno("waitpid: ");
+
+		// Handle stderr read errors, now that we've reaped the child
+		if (stderr_contents.status != test_status::pass)
+			return stderr_contents;
+
+		if (WIFEXITED(wstatus))
+		{
+			int expected_exit_status = (expected == build_expect::errors) ? 1 : 0;
+
+			switch (WEXITSTATUS(wstatus))
+			{
+				case 0:
+				case 1:
+					// Check exit code and fail immediately if it's wrong
+					if (WEXITSTATUS(wstatus) != expected_exit_status)
+						break;
+
+					// Compare with output file
+					if (stderr_contents.err_msg != expected_output)
+					{
+						stderr_contents.status = test_status::fail;
+						stderr_contents.err_msg += "== incorrect output - expected:\n";
+						stderr_contents.err_msg += expected_output;
+						return stderr_contents;
+					}
+
+					return { test_status::pass, "" };
+
+				case MAGIC_ERROR_STATUS:
+					// Child errored out in exec
+					return { test_status::error, "exec failed (is the path to lcoolc correct?)" };
+			}
+
+			// Incorrect exit status
+			stderr_contents.status = test_status::fail;
+			stderr_contents.err_msg += "== exited with status " + std::to_string(WEXITSTATUS(wstatus));
+			return stderr_contents;
+		}
+		else if (WIFSIGNALED(wstatus))
+		{
+			// Fatal signal
+			stderr_contents.status = test_status::fail;
+
+			const char* sig_string = strsignal(WTERMSIG(wstatus));
+			if (sig_string == NULL)
+				stderr_contents.err_msg += "== fatal signal " + std::to_string(WTERMSIG(wstatus));
+			else
+				stderr_contents.err_msg += "== fatal signal " + std::string(sig_string);
+
+			return stderr_contents;
+		}
+		else
+		{
+			return { test_status::error, "unknown waitpid result" };
+		}
+	};
+}
 
 // Runs a test and prints the results
 static bool run_test(const std::pair<std::string, test_fptr>& test, const test_info& info)

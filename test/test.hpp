@@ -44,6 +44,9 @@ namespace lcool
 		{
 			// Path to lcoolc executable
 			std::string lcoolc_path;
+
+			// Path to lli (LLVM bytecode interpreter) executable
+			std::string lli_path;
 		};
 
 		// If thrown from a test, causes the test to error out wit the given msg
@@ -90,7 +93,12 @@ namespace lcool
 		//  The compile must succeed without errors (warnings ignored)
 		//  The test must output the right information.
 		//  - "input" tests get an input file (.in) piped into them
-		test_fptr semantic(const char* file);
-		test_fptr semantic_input(const char* file);
+		test_fptr semantic(const char* file, bool with_input = false);
+
+		// Convinience function for semantic(file, true)
+		static inline test_fptr semantic_input(const char* file)
+		{
+			return semantic(file, true);
+		}
 	}
 }
