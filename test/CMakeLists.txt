@@ -41,4 +41,4 @@ function(test_compile_error TEST_NAME)
 	_semantic_test(semanic_input "${TEST_NAME}")
 endfunction()
 
-test_semantic(hello)
+test_semantic(semantic/hello)
