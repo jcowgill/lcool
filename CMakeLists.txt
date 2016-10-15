@@ -29,4 +29,6 @@ elseif(NOT LLVM_VERSION VERSION_LESS 3.9)
 endif()
 
 # Add subdirectories
+enable_testing()
 add_subdirectory(src)
+add_subdirectory(test)

@@ -1,0 +1,53 @@
+#!/bin/sh
+set -u
+
+bad_test_type() {
+	echo 'Bad test type'
+	exit 1
+}
+
+if [ $# -ne 3 ]; then
+	echo "Usage: $0 <lcoolc path> <test type> <test name>"
+	exit 1
+fi
+
+LCOOLC="$1"
+TTYPE="$2"
+TNAME="$3"
+
+# Parse test type
+case "$TTYPE" in
+	compile_*) LCOOLC_FLAGS='-o-' ;;
+	parse_*) LCOOLC_FLAGS='--parse' ;;
+	*) bad_test_type ;;
+esac
+
+EXPECTED_STATUS=0
+COMPARE_FILE="$TNAME.out"
+
+case "$TTYPE" in
+	*_good) COMPARE_FILE='/dev/null' ;;
+	*_warn) ;;
+	*_error) EXPECTED_STATUS=1 ;;
+	*) bad_test_type ;;
+esac
+
+# Run lcoolc
+STDERR="$("$LCOOLC" $LCOOLC_FLAGS "$TNAME.cl" </dev/null 2>&1 >/dev/null)"
+LCOOLC_STATUS=$?
+
+# Check exit code
+if [ $LCOOLC_STATUS -ne $EXPECTED_STATUS ]; then
+	echo "$STDERR"
+	echo "=== FAIL exited with status $LCOOLC_STATUS"
+	exit 1
+fi
+
+# Check stderr contents
+if ! echo "$STDERR" | diff -u -- "$COMPARE_FILE" -; then
+	echo "=== FAIL differing output"
+	exit 1
+fi
+
+echo "=== PASS"
+exit 0
