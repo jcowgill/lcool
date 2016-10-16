@@ -42,3 +42,4 @@ function(test_compile_error TEST_NAME)
 endfunction()
 
 test_semantic(semantic/hello)
+test_semantic(semantic/comparisons)
