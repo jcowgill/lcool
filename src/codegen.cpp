@@ -676,7 +676,7 @@ public:
 		auto left = evaluate(*expr.left);
 		auto right = evaluate(*expr.right);
 
-		// Result is always int, and all inputs must be ints
+		// Result is always int or bool, and all inputs must be ints
 		_result = _zero;
 		if (left.cls != _builtin_int || right.cls != _builtin_int)
 		{
@@ -707,14 +707,17 @@ public:
 				break;
 
 			case ast::compute_binary_type::less:
+				_result.cls = _builtin_bool;
 				_result.value = _builder.CreateICmpSLT(left.value, right.value);
 				break;
 
 			case ast::compute_binary_type::less_or_equal:
+				_result.cls = _builtin_bool;
 				_result.value = _builder.CreateICmpSLE(left.value, right.value);
 				break;
 
 			case ast::compute_binary_type::equal:
+				_result.cls = _builtin_bool;
 				_result.value = _builder.CreateICmpEQ(left.value, right.value);
 				break;
 
