@@ -37,7 +37,7 @@ endfunction()
 function(test_semantic TEST_NAME)
 	_semantic_test(semantic "${TEST_NAME}")
 endfunction()
-function(test_compile_error TEST_NAME)
+function(test_semantic_input TEST_NAME)
 	_semantic_test(semanic_input "${TEST_NAME}")
 endfunction()
 
