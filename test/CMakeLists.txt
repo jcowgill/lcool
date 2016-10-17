@@ -43,3 +43,4 @@ endfunction()
 
 test_semantic(semantic/hello)
 test_semantic(semantic/comparisons)
+test_semantic(semantic/arithmetic)
