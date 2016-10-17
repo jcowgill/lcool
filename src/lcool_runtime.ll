@@ -209,7 +209,7 @@
 ; External functions (from libc)
 %IO$File = type opaque
 
-declare void @abort() noreturn nounwind
+declare void @exit(i32) noreturn nounwind
 declare noalias i8* @malloc(i32) nounwind
 declare void @free(i8*) nounwind
 
@@ -237,14 +237,14 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
 
 ; Builtin method implementations
 
-; Prints a message and calls abort
+; Prints a message and exits
 define hidden fastcc void @abort_with_msg(i8* %msg) noreturn
 {
 	%stdout = load %IO$File*, %IO$File** @stdout
 	%stderr = load %IO$File*, %IO$File** @stderr
 	call i32 @fflush(%IO$File* %stdout)
 	call i32 @fputs(i8* %msg, %IO$File* %stderr)
-	call void @abort()
+	call void @exit(i32 1)
 	unreachable
 }
 
