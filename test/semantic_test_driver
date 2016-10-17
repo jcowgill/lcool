@@ -18,7 +18,7 @@ TNAME="$4"
 
 # Parse test type
 case "$TTYPE" in
-	semantic) LLI_INPUT='/dev/null' ;;
+	semantic|semantic_abort) LLI_INPUT='/dev/null' ;;
 	semantic_input) LLI_INPUT="$TNAME.in" ;;
 	*) bad_test_type ;;
 esac
@@ -48,17 +48,31 @@ STDERR="$("$LLI" "$TMP_BYTECODE" < "$LLI_INPUT" 2>&1 >"$TMP_OUTPUT")"
 LLI_STATUS=$?
 
 # Check exit code and stderr
-if [ $LLI_STATUS -ne 0 ] || [ -n "$STDERR" ]; then
-	echo "$STDERR"
-	echo "=== FAIL lli exited with status $LLI_STATUS"
-	exit 1
-fi
+if [ "$TTYPE" = 'semantic_abort' ]; then
+	if [ $LLI_STATUS -ne 1 ]; then
+		cat "$TMP_OUTPUT"
+		echo "$STDERR"
+		echo "=== FAIL lli exited with status $LLI_STATUS"
+		exit 1
+	fi
 
-#
-# Check stdout contents
-if ! diff -u -- "$TNAME.out" "$TMP_OUTPUT"; then
-	echo "=== FAIL differing output"
-	exit 1
+	# Check stdout / stderr contents
+	if ! (cat "$TMP_OUTPUT"; echo "$STDERR") | diff -u -- "$TNAME.out" -; then
+		echo "=== FAIL differing output"
+		exit 1
+	fi
+else
+	if [ $LLI_STATUS -ne 0 ] || [ -n "$STDERR" ]; then
+		echo "$STDERR"
+		echo "=== FAIL lli exited with status $LLI_STATUS"
+		exit 1
+	fi
+
+	# Check stdout contents
+	if ! diff -u -- "$TNAME.out" "$TMP_OUTPUT"; then
+		echo "=== FAIL differing output"
+		exit 1
+	fi
 fi
 
 echo "=== PASS"
