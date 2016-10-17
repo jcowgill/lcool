@@ -48,5 +48,5 @@ class Main inherits IO
 		print_bool_test("-1 < 1 = ", 0-1 < 1);
 		print_bool_test("-1 <= 1 = ", 0-1 <= 1);
 		print_bool_test("-1 = 1 = ", 0-1 = 1);
-	 }};
+	}};
 };
