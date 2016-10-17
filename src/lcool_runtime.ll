@@ -215,6 +215,7 @@ declare void @free(i8*) nounwind
 
 declare i32 @printf(i8*, ...) nounwind
 declare i32 @fputs(i8*, %IO$File*) nounwind
+declare i32 @fputc(i32, %IO$File*) nounwind
 declare i8* @fgets(i8*, i32, %IO$File*) nounwind
 declare i32 @fflush(%IO$File*) nounwind
 declare i32 @atoi(i8*) nounwind
@@ -244,6 +245,7 @@ define hidden fastcc void @abort_with_msg(i8* %msg) noreturn
 	%stderr = load %IO$File*, %IO$File** @stderr
 	call i32 @fflush(%IO$File* %stdout)
 	call i32 @fputs(i8* %msg, %IO$File* %stderr)
+	call i32 @fputc(i32 10, %IO$File* %stderr)
 	call void @exit(i32 1)
 	unreachable
 }
