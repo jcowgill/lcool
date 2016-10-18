@@ -1,0 +1,6 @@
+boxed_zero = 0
+boxed_one = 1
+boxed_two = 2
+boxed_false = False
+boxed_reused (True) = True
+boxed_reused (2) = 2
