@@ -41,7 +41,7 @@ function(test_semantic_abort TEST_NAME)
 	_semantic_test(semantic_abort "${TEST_NAME}")
 endfunction()
 function(test_semantic_input TEST_NAME)
-	_semantic_test(semanic_input "${TEST_NAME}")
+	_semantic_test(semantic_input "${TEST_NAME}")
 endfunction()
 
 test_semantic(semantic/hello)
