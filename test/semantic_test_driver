@@ -1,0 +1,79 @@
+#!/bin/sh
+set -u
+
+bad_test_type() {
+	echo 'Bad test type'
+	exit 1
+}
+
+if [ $# -ne 4 ]; then
+	echo "Usage: $0 <lcoolc path> <lli path> <test type> <test name>"
+	exit 1
+fi
+
+LCOOLC="$1"
+LLI="$2"
+TTYPE="$3"
+TNAME="$4"
+
+# Parse test type
+case "$TTYPE" in
+	semantic|semantic_abort) LLI_INPUT='/dev/null' ;;
+	semantic_input) LLI_INPUT="$TNAME.in" ;;
+	*) bad_test_type ;;
+esac
+
+# Create temp files
+TMP_BYTECODE="$(mktemp lcoolc.tmp.XXXXXXXXXX)"
+TMP_OUTPUT="$(mktemp lcoolc.tmp.XXXXXXXXXX)"
+trap 'rm -f "$TMP_BYTECODE" "$TMP_OUTPUT"' EXIT
+
+if [ ! -f "$TMP_BYTECODE" ] || [ ! -f "$TMP_OUTPUT" ]; then
+	exit 1
+fi
+
+# Run lcoolc
+STDERR="$("$LCOOLC" -o- "$TNAME.cl" </dev/null 2>&1 >"$TMP_BYTECODE")"
+LCOOLC_STATUS=$?
+
+# Check exit code
+if [ $LCOOLC_STATUS -ne 0 ]; then
+	echo "$STDERR"
+	echo "=== FAIL lcoolc exited with status $LCOOLC_STATUS"
+	exit 1
+fi
+
+# Run lli
+STDERR="$("$LLI" "$TMP_BYTECODE" < "$LLI_INPUT" 2>&1 >"$TMP_OUTPUT")"
+LLI_STATUS=$?
+
+# Check exit code and stderr
+if [ "$TTYPE" = 'semantic_abort' ]; then
+	if [ $LLI_STATUS -ne 1 ]; then
+		cat "$TMP_OUTPUT"
+		echo "$STDERR"
+		echo "=== FAIL lli exited with status $LLI_STATUS"
+		exit 1
+	fi
+
+	# Check stdout / stderr contents
+	if ! (cat "$TMP_OUTPUT"; echo "$STDERR") | diff -u -- "$TNAME.out" -; then
+		echo "=== FAIL differing output"
+		exit 1
+	fi
+else
+	if [ $LLI_STATUS -ne 0 ] || [ -n "$STDERR" ]; then
+		echo "$STDERR"
+		echo "=== FAIL lli exited with status $LLI_STATUS"
+		exit 1
+	fi
+
+	# Check stdout contents
+	if ! diff -u -- "$TNAME.out" "$TMP_OUTPUT"; then
+		echo "=== FAIL differing output"
+		exit 1
+	fi
+fi
+
+echo "=== PASS"
+exit 0
