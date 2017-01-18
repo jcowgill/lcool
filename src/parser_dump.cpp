@@ -128,7 +128,7 @@ void ast_dumper::dump(const ast::method& method)
 		}
 	}
 
-	dump_indented(*method.body, 2);
+	dump_indented(*method.body);
 }
 
 void ast_dumper::dump(const ast::expr& expr)
