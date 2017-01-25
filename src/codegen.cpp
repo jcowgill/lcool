@@ -642,27 +642,32 @@ public:
 				break;
 
 			case ast::compute_unary_type::negate:
-			case ast::compute_unary_type::logical_not:
-				// Check input types
-				if (expr.op == ast::compute_unary_type::negate &&
-				    subexpr.cls != _builtin_int)
+				// Integer negation
+				if (subexpr.cls != _builtin_int)
 				{
 					_log.error(expr.loc, "input to ~ operator must be an Int");
 					_result = _zero;
 				}
-				else if (expr.op == ast::compute_unary_type::logical_not &&
-				    subexpr.cls != _builtin_int)
+				else
+				{
+					_result.value = _builder.CreateNeg(subexpr.value);
+					_result.cls = _builtin_int;
+				}
+				break;
+
+			case ast::compute_unary_type::logical_not:
+				// Boolean complement
+				if (subexpr.cls != _builtin_bool)
 				{
 					_log.error(expr.loc, "input to 'not' operator must be a Bool");
 					_result.value = _builder.getFalse();
-					_result.cls = _builtin_bool;
 				}
 				else
 				{
 					_result.value = _builder.CreateNot(subexpr.value);
-					_result.cls = subexpr.cls;
 				}
 
+				_result.cls = _builtin_bool;
 				break;
 
 			default:
