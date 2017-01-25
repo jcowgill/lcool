@@ -262,7 +262,7 @@ void ast_dumper::visit(const ast::constant_string& e)
 		}
 	}
 
-    out_ << "\" (" << e.loc << ")\n";
+	out_ << "\" (" << e.loc << ")\n";
 }
 
 void ast_dumper::visit(const ast::identifier& e)
