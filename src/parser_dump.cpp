@@ -244,7 +244,25 @@ void ast_dumper::visit(const ast::constant_int& e)
 
 void ast_dumper::visit(const ast::constant_string& e)
 {
-	print_indent() << "string \"" << e.value << "\" (" << e.loc << ")\n";
+	print_indent() << "string \"";
+
+	// Escape characters which would have been escaped before
+	for (char c : e.value)
+	{
+		switch (c)
+		{
+			case '\b': out_ << "\\b"; break;
+			case '\f': out_ << "\\f"; break;
+			case '\n': out_ << "\\n"; break;
+			case '\r': out_ << "\\r"; break;
+			case '\t': out_ << "\\t"; break;
+			case '\\': out_ << "\\\\"; break;
+			case '\"': out_ << "\\\""; break;
+			default:   out_ << c; break;
+		}
+	}
+
+    out_ << "\" (" << e.loc << ")\n";
 }
 
 void ast_dumper::visit(const ast::identifier& e)
