@@ -574,20 +574,22 @@ unique_ptr<ast::expr> parser::parse_integer()
 {
 	auto result = make_expr<ast::constant_int>();
 	std::string str_value = consume(token_type::integer).value;
-	std::uint32_t int_value = 0;
+	std::int32_t int_value = 0;
 
 	// Convert string to integer
 	for (char c : str_value)
 	{
-		// Shift and add to number
-		int_value = (int_value << 1) + (c - '0');
+		// Calculate new value after adding this character
+		std::int64_t new_int_value = (int_value * 10) + (c - '0');
 
 		// Check for overflow
-		if (int_value & (1 << 31))
+		if (new_int_value > std::numeric_limits<int32_t>::max())
 		{
 			log.warning(result->loc, "number cannot be represented: " + str_value);
 			break;
 		}
+
+		int_value = static_cast<int32_t>(new_int_value);
 	}
 
 	result->value = int_value;
