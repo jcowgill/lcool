@@ -677,57 +677,104 @@ public:
 
 	void visit(const ast::compute_binary& expr) override
 	{
-		llvm::Function* check_func;
 		auto left = evaluate(*expr.left);
 		auto right = evaluate(*expr.right);
 
-		// Result is always int or bool, and all inputs must be ints
-		_result = _zero;
-		if (left.cls != _builtin_int || right.cls != _builtin_int)
+		// Equality is special as it accepts many different types
+		if (expr.op == ast::compute_binary_type::equal)
 		{
-			_log.error(expr.loc, "both inputs to an arithmetic expression must be Ints");
-			return;
-		}
+			_result.cls = _builtin_bool;
 
-		switch (expr.op)
-		{
-			case ast::compute_binary_type::add:
-				_result.value = _builder.CreateAdd(left.value, right.value);
-				break;
+			if ((left.cls == _builtin_bool) != (right.cls == _builtin_bool)
+				|| (left.cls == _builtin_int) != (right.cls == _builtin_int)
+				|| (left.cls == _builtin_string) != (right.cls == _builtin_string))
+			{
+				_log.error(expr.loc, "basic types can only be compared with themselves");
+				_result.value = _builder.getFalse();
+			}
+			else if (left.cls == _builtin_string)
+			{
+				// String equality
+				auto to_call = _program.module()->getFunction("String$equals");
+				auto call_inst = _builder.CreateCall(to_call, { left.value, right.value });
+				call_inst->setCallingConv(to_call->getCallingConv());
+				_result.value = call_inst;
+			}
+			else if(left.cls->is_subclass_of(right.cls) || right.cls->is_subclass_of(left.cls))
+			{
+				// Upcast one side to the other
+				if (left.cls->is_subclass_of(right.cls))
+					left.value = left.cls->upcast_to(_builder, left.value, right.cls);
+				else
+					right.value = right.cls->upcast_to(_builder, right.value, left.cls);
 
-			case ast::compute_binary_type::subtract:
-				_result.value = _builder.CreateSub(left.value, right.value);
-				break;
-
-			case ast::compute_binary_type::multiply:
-				_result.value = _builder.CreateMul(left.value, right.value);
-				break;
-
-			case ast::compute_binary_type::divide:
-				// Check for division by zero
-				_program.call_global(_builder, "zero_division_check", right.value);
-
-				// Do the division
-				_result.value = _builder.CreateSDiv(left.value, right.value);
-				break;
-
-			case ast::compute_binary_type::less:
-				_result.cls = _builtin_bool;
-				_result.value = _builder.CreateICmpSLT(left.value, right.value);
-				break;
-
-			case ast::compute_binary_type::less_or_equal:
-				_result.cls = _builtin_bool;
-				_result.value = _builder.CreateICmpSLE(left.value, right.value);
-				break;
-
-			case ast::compute_binary_type::equal:
-				_result.cls = _builtin_bool;
+				// Eveyrthing else compares pointers / values for equality
 				_result.value = _builder.CreateICmpEQ(left.value, right.value);
-				break;
+			}
+			else
+			{
+				// If the above condition failes, the types can never be equal
+				_log.warning(expr.loc, "result of comparison is always false");
+				_result.value = _builder.getFalse();
+			}
+		}
+		else if (expr.op == ast::compute_binary_type::add ||
+				expr.op == ast::compute_binary_type::subtract ||
+				expr.op == ast::compute_binary_type::multiply ||
+				expr.op == ast::compute_binary_type::divide)
+		{
+			// Arithmetic expression - only accepts ints, result is always int
+			_result = _zero;
+			if (left.cls != _builtin_int || right.cls != _builtin_int)
+			{
+				_log.error(expr.loc, "both inputs to an arithmetic expression must be Ints");
+			}
+			else
+			{
+				switch (expr.op)
+				{
+					case ast::compute_binary_type::add:
+						_result.value = _builder.CreateAdd(left.value, right.value);
+						break;
 
-			default:
-				assert(0);
+					case ast::compute_binary_type::subtract:
+						_result.value = _builder.CreateSub(left.value, right.value);
+						break;
+
+					case ast::compute_binary_type::multiply:
+						_result.value = _builder.CreateMul(left.value, right.value);
+						break;
+
+					case ast::compute_binary_type::divide:
+						// Check for division by zero
+						_program.call_global(_builder, "zero_division_check", right.value);
+
+						// Do the division
+						_result.value = _builder.CreateSDiv(left.value, right.value);
+						break;
+
+					default:
+						assert(0);
+				}
+			}
+		}
+		else
+		{
+			// Comparison expression - only accepts ints, result is always bool
+			_result.cls = _builtin_bool;
+			if (left.cls != _builtin_int || right.cls != _builtin_int)
+			{
+				_log.error(expr.loc, "both inputs to a comparison expression must be Ints");
+				_result.value = _builder.getFalse();
+			}
+			else if (expr.op == ast::compute_binary_type::less)
+			{
+				_result.value = _builder.CreateICmpSLT(left.value, right.value);
+			}
+			else
+			{
+				_result.value = _builder.CreateICmpSLE(left.value, right.value);
+			}
 		}
 	}
 };
