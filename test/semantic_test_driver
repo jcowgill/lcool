@@ -57,7 +57,7 @@ if [ "$TTYPE" = 'semantic_abort' ]; then
 	fi
 
 	# Check stdout / stderr contents
-	if ! (cat "$TMP_OUTPUT"; echo "$STDERR") | diff -u -- "$TNAME.out" -; then
+	if ! (cat "$TMP_OUTPUT"; echo "$STDERR") | diff -u --text -- "$TNAME.out" -; then
 		echo "=== FAIL differing output"
 		exit 1
 	fi
@@ -69,7 +69,7 @@ else
 	fi
 
 	# Check stdout contents
-	if ! diff -u -- "$TNAME.out" "$TMP_OUTPUT"; then
+	if ! diff -u --text -- "$TNAME.out" "$TMP_OUTPUT"; then
 		echo "=== FAIL differing output"
 		exit 1
 	fi

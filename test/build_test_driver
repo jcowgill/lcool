@@ -44,7 +44,7 @@ if [ $LCOOLC_STATUS -ne $EXPECTED_STATUS ]; then
 fi
 
 # Check stderr contents
-if ! echo "$STDERR" | diff -u -- "$COMPARE_FILE" -; then
+if ! echo "$STDERR" | diff -u --text -- "$COMPARE_FILE" -; then
 	echo "=== FAIL differing output"
 	exit 1
 fi
