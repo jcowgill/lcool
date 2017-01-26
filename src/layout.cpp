@@ -380,7 +380,7 @@ llvm::Constant* create_partial_vtable_init(user_class* top_cls, cool_program& ou
 		auto null_ptr = llvm::ConstantPointerNull::get(top_cls->llvm_type());
 		auto type_i32 = llvm::Type::getInt32Ty(output.module()->getContext());
 		auto one = llvm::ConstantInt::get(type_i32, 1);
-		auto gep_instruction = llvm::ConstantExpr::getGetElementPtr(top_cls->llvm_type(), null_ptr, one);
+		auto gep_instruction = llvm::ConstantExpr::getGetElementPtr(top_cls->llvm_struct_type(), null_ptr, one);
 		auto final_size = llvm::ConstantExpr::getPtrToInt(gep_instruction, type_i32);
 		elements.push_back(final_size);
 
