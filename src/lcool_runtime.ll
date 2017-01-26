@@ -61,6 +61,7 @@
 ; String.length
 ; String.concat
 ; String.substr
+; String$equals
 
 ; Object structures
 %Object$vtabletype = type
@@ -749,4 +750,48 @@ Empty:
 RangeError:
 	call fastcc void @abort_with_msg(i8* getelementptr inbounds ([35 x i8], [35 x i8]* @err_range, i32 0, i32 0))
 	unreachable
+}
+
+define hidden fastcc i1 @String$equals(%String* %a, %String* %b)
+{
+	; Get lengths
+	%a_len_ptr = getelementptr inbounds %String, %String* %a, i32 0, i32 1
+	%a_len = load i32, i32* %a_len_ptr
+	%b_len_ptr = getelementptr inbounds %String, %String* %b, i32 0, i32 1
+	%b_len = load i32, i32* %b_len_ptr
+
+	; Get initial data pointers
+	%a_data_start = getelementptr inbounds %String, %String* %a, i32 0, i32 2, i32 0
+	%b_data_start = getelementptr inbounds %String, %String* %b, i32 0, i32 2, i32 0
+
+	; Lengths must be identical
+	%lengths_equal = icmp eq i32 %a_len, %b_len
+	br i1 %lengths_equal, label %FullCompare, label %Fail
+
+FullCompare:
+	; Get pointers and counter
+	%bytes_left = phi i32 [ %a_len, %0 ], [ %new_len, %FullCompare2 ]
+	%a_data = phi i8* [ %a_data_start, %0 ], [ %new_a_data, %FullCompare2 ]
+	%b_data = phi i8* [ %b_data_start, %0 ], [ %new_b_data, %FullCompare2 ]
+
+	; Finished?
+	%done = icmp eq i32 %bytes_left, 0
+	br i1 %done, label %Pass, label %FullCompare2
+
+FullCompare2:
+	; Compare next character
+	%deref_a = load i8, i8* %a_data
+	%deref_b = load i8, i8* %b_data
+	%equal = icmp eq i8 %deref_a, %deref_b
+
+	%new_len = sub nuw i32 %bytes_left, 1
+	%new_a_data = getelementptr inbounds i8, i8* %a_data, i8 1
+	%new_b_data = getelementptr inbounds i8, i8* %b_data, i8 1
+	br i1 %equal, label %FullCompare, label %Fail
+
+Pass:
+	ret i1 1
+
+Fail:
+	ret i1 0
 }
