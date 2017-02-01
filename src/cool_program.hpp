@@ -148,8 +148,8 @@ namespace lcool
 		 * Creates a call instruction to call this method
 		 *
 		 * The first argument must be an instance of the declaring class of this
-		 * method's slot (ie you probably need to upcast it first). A runtime
-		 * error is generated if this argument is null.
+		 * method's slot (ie you probably need to upcast it first). No null
+		 * check is performed.
 		 *
 		 * @param builder the IR builder to insert the call into
 		 * @param args list of arguments to pass to this method
@@ -279,6 +279,11 @@ namespace lcool
 		 * Decrement the refcount on an object (and possibly free it)
 		 */
 		virtual void refcount_dec(llvm::IRBuilder<>& builder, llvm::Value* value) const;
+
+		/**
+		 * Emits a check to ensure the given value is not null
+		 */
+		virtual void ensure_not_null(llvm::IRBuilder<>& builder, llvm::Value* value) const;
 
 		/**
 		 * Returns a pointer to this class's constructor

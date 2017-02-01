@@ -113,6 +113,11 @@ namespace
 			refcount_inc(builder, empty_str);
 			return empty_str;
 		}
+
+		virtual void ensure_not_null(llvm::IRBuilder<>& builder, llvm::Value* value) const override
+		{
+			// Strings can never be null, so this is a no-op
+		}
 	};
 
 	/** Builtin value class (Int and Bool) */
@@ -174,6 +179,10 @@ namespace
 		}
 
 		virtual void refcount_dec(llvm::IRBuilder<>&, llvm::Value*) const override
+		{
+		}
+
+		virtual void ensure_not_null(llvm::IRBuilder<>& builder, llvm::Value* value) const override
 		{
 		}
 

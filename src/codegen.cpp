@@ -373,6 +373,7 @@ public:
 		// Do the function call
 		if (args.size() == parameter_types.size())
 		{
+			cls->ensure_not_null(_builder, coerced);
 			_result.value = to_call->call(_builder, func_args, force_static);
 			_result.cls = to_call->slot()->return_type;
 		}

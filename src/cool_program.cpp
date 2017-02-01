@@ -60,9 +60,6 @@ llvm::Value* lcool::cool_method::call(
 	// Upcast to object
 	llvm::Value* self_upcast = _slot->declaring_class->upcast_to_object(builder, args[0]);
 
-	// Call null_check on the object
-	cool_program::call_global(_func->getParent(), builder, "null_check", self_upcast);
-
 	// Always call statically if there is no vtable entry, or if the
 	//  declaring class is final
 	if (_slot->vtable_index == 0 || _declaring_class->is_final())
@@ -212,6 +209,13 @@ void lcool::cool_class::refcount_dec(llvm::IRBuilder<>& builder, llvm::Value* va
 	// Call refcount_dec on value given
 	call_global(builder, "refcount_dec", upcast_to_object(builder, value));
 }
+
+void lcool::cool_class::ensure_not_null(llvm::IRBuilder<>& builder, llvm::Value* value) const
+{
+	// Call null_check on value given
+	call_global(builder, "null_check", upcast_to_object(builder, value));
+}
+
 
 llvm::Function* lcool::cool_class::constructor()
 {
