@@ -108,6 +108,53 @@ bool lcool::cool_class::is_subclass_of(const cool_class* other) const
 	       (_parent != nullptr &&  _parent->is_subclass_of(other));
 }
 
+cool_class* lcool::cool_class::common_ancestor(cool_class* a, cool_class* b)
+{
+	std::stack<cool_class*> a_ancestors, b_ancestors;
+
+	// Handle some very common easy cases
+	if (a == b)
+		return a;
+	if (a.parent() == nullptr)
+		return a;
+	if (b.parent() == nullptr)
+		return b;
+
+	// Push all ancestors of a and b onto 2 stacks
+	do
+	{
+		a_ancestors.push(a);
+		a = a.parent();
+
+	} while (a != nullptr);
+
+	do
+	{
+		b_ancestors.push(b);
+		b = b.parent();
+
+	} while (b != nullptr);
+
+	// Search stacks to find first instance where classes are different
+	cool_class* old_cls;
+	do
+	{
+		// If either stack is empty, one class inherits from the other
+		if (a_ancestors.empty() || b_ancestors.empty())
+			return a;
+
+		old_cls = a;
+		a = a_ancestors.top();
+		a.pop();
+		b = b_ancestors.top();
+		b.pop();
+	}
+	while (a == b);
+
+	assert(old_cls != nullptr);
+	return old_cls;
+}
+
 bool lcool::cool_class::is_final() const
 {
 	return false;

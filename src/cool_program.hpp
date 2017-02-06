@@ -193,6 +193,9 @@ namespace lcool
 		/** Returns true if this class is a subclass of some other class */
 		bool is_subclass_of(const cool_class* other) const;
 
+		/** Finds lowest common ancestor of two classes */
+		static cool_class* common_ancestor(cool_class* a, cool_class* b);
+
 		/** Returns true if this class is final (can't be inherited from) */
 		virtual bool is_final() const;
 

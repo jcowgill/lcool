@@ -67,24 +67,6 @@ llvm::Value* default_initializer(llvm::IRBuilder<>& builder, cool_class* cls)
 		return llvm::Constant::getNullValue(cls->llvm_type());
 }
 
-// Finds the first common parent class of the given types
-cool_class* type_join(cool_class* a, cool_class* b)
-{
-	while (a != nullptr)
-	{
-		// If b is a subclass of a, return it
-		// Otherwise go to a's parent. Eventually we'll get to Object
-		//  which b must be a subtype of
-		if (b->is_subclass_of(a))
-			return a;
-
-		a = a->parent();
-	}
-
-	// Should be impossible
-	assert(false);
-}
-
 // An LLVM value attached to its cool class
 struct value_and_cls
 {
@@ -414,7 +396,7 @@ public:
 
 		// After evaluation, we need to coerce both results into the type
 		//  common to both, then jump to the done block
-		cool_class* common_type = type_join(result_true.cls, result_false.cls);
+		auto common_type = cool_class::common_ancestor(result_true.cls, result_false.cls);
 		_builder.SetInsertPoint(block_true);
 		auto value_true = result_true.cls->upcast_to(_builder, result_true.value, common_type);
 		_builder.CreateBr(block_done);
