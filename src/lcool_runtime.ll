@@ -236,6 +236,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
 @err_null = private unnamed_addr constant [27 x i8] c"Illegal use of void object\00"
 @err_range = private unnamed_addr constant [35 x i8] c"Bad range for String.substr() call\00"
 @err_div_zero = private unnamed_addr constant [17 x i8] c"Division by zero\00"
+@err_case = private unnamed_addr constant [29 x i8] c"Case without matching branch\00"
 
 ; Builtin method implementations
 

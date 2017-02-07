@@ -525,11 +525,207 @@ public:
 		_locals.pop(expr.vars.size());
 	}
 
+	// Internal data used to construct case expressions
+	struct case_data
+	{
+		// Branch type
+		cool_class* cls;
+
+		// Branch AST data
+		const ast::type_case_branch* branch;
+
+		// The test block assigned to the branch
+		llvm::BasicBlock* test_block;
+
+		// The _exit_ value block (where the result is from)
+		//  This may be different from the entry value block where the test
+		//  block branches into.
+		llvm::BasicBlock* value_block_exit;
+
+		// The result of the branch before upcasting
+		value_and_cls result;
+	};
+
 	void visit(const ast::type_case& expr) override
 	{
-#warning Implement case
-		_log.error(expr.loc, "case not implemented");
-		_result = _zero;
+		auto value = evaluate(*expr.value);
+
+		// Resolve class names of all case branches
+		std::unordered_map<cool_class*, size_t> cls_map;
+		std::vector<case_data> sorted_branches;
+
+		for (auto& branch : expr.branches)
+		{
+			auto cls = _program.lookup_class(branch.type);
+			if (cls == nullptr)
+				_log.error(expr.loc, "class not defined '" + branch.type + "'");
+			else if(!cls_map.insert({cls, sorted_branches.size()}).second)
+				_log.error(expr.loc, "class occurs twice in case expression '" + branch.type + "'");
+			else
+				sorted_branches.push_back({cls, &branch, nullptr, nullptr, { nullptr, nullptr }});
+		}
+
+		// Bail out if there are no branches
+		if (sorted_branches.empty())
+		{
+			if (expr.branches.empty())
+				_log.error(expr.loc, "case expression with no branches");
+
+			_result = _null_object;
+			return;
+		}
+
+		// Sort case branches so parent classes are below child classes
+		std::sort(sorted_branches.begin(), sorted_branches.end(),
+			[&cls_map](const case_data& a, const case_data& b) -> bool {
+				// Handle equal classes
+				if (a.cls == b.cls)
+					return false;
+
+				// More derived classes come first
+				if (a.cls->is_subclass_of(b.cls))
+					return true;
+				else if (b.cls->is_subclass_of(a.cls))
+					return false;
+
+				// Incomparable classes are ordered by index in the class map
+				return cls_map.at(a.cls) < cls_map.at(b.cls);
+			});
+
+		/*
+		 * LLVM case code structure
+		 * ======
+		 * Initial block:
+		 *  = Incoming active block
+		 *  - Evaluate value (already done)
+		 *  - Null check result
+		 *  - Unconditional branch to first test block
+		 *
+		 * Branch test blocks:
+		 *  = One for each case branch
+		 *  - Calls instance_of(value, vtable)
+		 *  - Branch to branch value block if true
+		 *  - Branch to next test block if false
+		 *
+		 * Default branch test block:
+		 *  = Used eg for Object
+		 *  - Unconditional branch to branch value block
+		 *
+		 * Failing branch test block:
+		 *  = Used if no default case
+		 *  - Calls abort_with_message
+		 *
+		 * Branch value blocks:
+		 *  = One for each case branch
+		 *  - Downcast value
+		 *  - Let variable equal to it
+		 *  - Evaluate branch
+		 *  - Upcast result (this cannot be done until the very end)
+		 *  - Branch to phi block
+		 *
+		 * Phi block:
+		 *  - Conains phy instruction to calculate result of the case
+		 *  = Outgoing active block
+		 */
+
+		bool has_default_branch = false;
+		auto& context = _program.module()->getContext();
+		auto func_instance_of = _program.module()->getFunction("instance_of");
+
+		// Initial block
+		value.cls->ensure_not_null(_builder, value.value);
+		sorted_branches[0].test_block = llvm::BasicBlock::Create(context, "case_test", _func);
+		_builder.CreateBr(sorted_branches[0].test_block);
+
+		// Create failing and phi blocks
+		auto fail_block = llvm::BasicBlock::Create(context, "case_fail", _func);
+		cool_class* final_upcast_cls = nullptr;
+
+		for (size_t i = 0; i < sorted_branches.size(); i++)
+		{
+			auto& branch_data = sorted_branches[i];
+
+			// Create our value block + next test block
+			llvm::BasicBlock* test_block = branch_data.test_block;
+			llvm::BasicBlock* value_block_enter = llvm::BasicBlock::Create(context, "case_value", _func);
+			llvm::BasicBlock* next_test_block;
+
+			if (i + 1 < sorted_branches.size())
+			{
+				next_test_block = llvm::BasicBlock::Create(context, "case_test", _func);
+				sorted_branches[i + 1].test_block = next_test_block;
+			}
+			else
+			{
+				next_test_block = fail_block;
+			}
+
+			_builder.SetInsertPoint(test_block);
+
+			// Check if this test is always true or false
+			if (value.cls->is_subclass_of(branch_data.cls) && !has_default_branch)
+			{
+				// Branch is always true
+				_builder.CreateBr(value_block_enter);
+			}
+			else if (!branch_data.cls->is_subclass_of(value.cls) || has_default_branch)
+			{
+				// Branch is always false / second default branch
+				_log.warning(expr.loc, "unreachable case branch for type '" + branch_data.cls->name() + "'");
+				_builder.CreateBr(next_test_block);
+			}
+			else
+			{
+				// Normal branch
+				auto call_inst = _builder.CreateCall(func_instance_of, {
+					value.cls->upcast_to_object(_builder, value.value),
+					value.cls->upcast_to_object(_builder, value.cls->llvm_vtable())
+				});
+				_builder.CreateCondBr(call_inst, value_block_enter, next_test_block);
+			}
+
+			// Create value block except for final upcast
+			_builder.SetInsertPoint(value_block_enter);
+			auto value_downcast = branch_data.cls->downcast(_builder, value.value);
+#warning Do let id = value_downcast (refactor let a bit)
+
+			branch_data.result = evaluate(*branch_data.branch->body);
+			branch_data.value_block_exit = _builder.GetInsertBlock();
+
+			// Update final upcast class
+			if (final_upcast_cls == nullptr)
+				final_upcast_cls = branch_data.result.cls;
+			else
+				final_upcast_cls = cool_class::common_ancestor(final_upcast_cls, branch_data.result.cls);
+		}
+
+		// Perform upcasts, jumps and create final phi block
+		auto phi_block = llvm::BasicBlock::Create(context, "case_phi", _func);
+		_builder.SetInsertPoint(phi_block);
+		auto phi = _builder.CreatePHI(final_upcast_cls->llvm_type(), sorted_branches.size());
+
+		for (size_t i = 0; i < sorted_branches.size(); i++)
+		{
+			auto& branch_data = sorted_branches[i];
+
+			_builder.SetInsertPoint(branch_data.value_block_exit);
+			auto result_upcast = branch_data.result.cls->upcast_to(
+					_builder, branch_data.result.value, final_upcast_cls);
+			phi->addIncoming(result_upcast, branch_data.value_block_exit);
+		}
+
+		// Write fail block
+		auto abort_with_msg = _program.module()->getGlobalVariable("abort_with_msg");
+		auto err_case = _program.module()->getGlobalVariable("err_case");
+		_builder.SetInsertPoint(fail_block);
+		_builder.CreateCall(abort_with_msg,
+			_builder.CreateInBoundsGEP(err_case, { _builder.getInt32(0), _builder.getInt32(0) }));
+		_builder.CreateUnreachable();
+
+		// Done!
+		_result.value = phi;
+		_result.cls = final_upcast_cls;
+		_builder.SetInsertPoint(phi_block);
 	}
 
 	void visit(const ast::new_object& expr) override

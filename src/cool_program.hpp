@@ -234,9 +234,6 @@ namespace lcool
 
 		/**
 		 * Returns a pointer to the LLVM vtable object used for this class
-		 *
-		 * This is null for Int and Bool - if you want to call any methods on
-		 * them, you need to upcast first.
 		 */
 		llvm::GlobalVariable* llvm_vtable()
 		{
@@ -254,6 +251,8 @@ namespace lcool
 
 		/**
 		 * Upcasts an object of this class's type to one of it's parent types
+		 *
+		 * This may also be used to upcast vtables.
 		 *
 		 * For Int and Bool, upcasting to Object will box the value.
 		 * @return the upcasted value or nullptr if to is not a subclass of this class
