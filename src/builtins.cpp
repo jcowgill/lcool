@@ -114,7 +114,7 @@ namespace
 			return empty_str;
 		}
 
-		virtual void ensure_not_null(llvm::IRBuilder<>& builder, llvm::Value* value) const override
+		virtual void ensure_not_null(llvm::IRBuilder<>&, llvm::Value*) const override
 		{
 			// Strings can never be null, so this is a no-op
 		}
@@ -182,7 +182,7 @@ namespace
 		{
 		}
 
-		virtual void ensure_not_null(llvm::IRBuilder<>& builder, llvm::Value* value) const override
+		virtual void ensure_not_null(llvm::IRBuilder<>&, llvm::Value*) const override
 		{
 		}
 
