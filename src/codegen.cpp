@@ -875,10 +875,7 @@ public:
 			else if (left.cls == _builtin_string)
 			{
 				// String equality
-				auto to_call = _program.module()->getFunction("String$equals");
-				auto call_inst = _builder.CreateCall(to_call, { left.value, right.value });
-				call_inst->setCallingConv(to_call->getCallingConv());
-				_result.value = call_inst;
+				_result.value = _program.call_global(_builder, "String$equals", { left.value, right.value });
 			}
 			else if(left.cls->is_subclass_of(right.cls) || right.cls->is_subclass_of(left.cls))
 			{
@@ -927,7 +924,7 @@ public:
 
 					case ast::compute_binary_type::divide:
 						// Check for division by zero
-						_program.call_global(_builder, "zero_division_check", right.value);
+						_program.call_global(_builder, "zero_division_check", { right.value });
 
 						// Do the division
 						_result.value = _builder.CreateSDiv(left.value, right.value);

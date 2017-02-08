@@ -173,7 +173,7 @@ std::vector<cool_method*> lcool::cool_class::methods()
 llvm::Value* lcool::cool_class::create_object(llvm::IRBuilder<>& builder) const
 {
 	// Invoke new_object on vtable pointer
-	auto value = call_global(builder, "new_object", upcast_to_object(builder, _vtable));
+	auto value = call_global(builder, "new_object", { upcast_to_object(builder, _vtable) });
 	return downcast(builder, value);
 }
 
@@ -219,19 +219,19 @@ llvm::Value* lcool::cool_class::downcast(llvm::IRBuilder<>& builder, llvm::Value
 void lcool::cool_class::refcount_inc(llvm::IRBuilder<>& builder, llvm::Value* value) const
 {
 	// Call refcount_inc on value given
-	call_global(builder, "refcount_inc", upcast_to_object(builder, value));
+	call_global(builder, "refcount_inc", { upcast_to_object(builder, value) });
 }
 
 void lcool::cool_class::refcount_dec(llvm::IRBuilder<>& builder, llvm::Value* value) const
 {
 	// Call refcount_dec on value given
-	call_global(builder, "refcount_dec", upcast_to_object(builder, value));
+	call_global(builder, "refcount_dec", { upcast_to_object(builder, value) });
 }
 
 void lcool::cool_class::ensure_not_null(llvm::IRBuilder<>& builder, llvm::Value* value) const
 {
 	// Call null_check on value given
-	call_global(builder, "null_check", upcast_to_object(builder, value));
+	call_global(builder, "null_check", { upcast_to_object(builder, value) });
 }
 
 
@@ -274,9 +274,10 @@ llvm::Function* lcool::cool_class::get_object_vtable_func(unsigned index)
 	return llvm::cast<llvm::Function>(current->getOperand(index));
 }
 
-llvm::CallInst* lcool::cool_class::call_global(llvm::IRBuilder<>& builder, std::string name, llvm::Value* arg) const
+llvm::CallInst* lcool::cool_class::call_global(llvm::IRBuilder<>& builder,
+		std::string name, std::initializer_list<llvm::Value*> args) const
 {
-	return cool_program::call_global(_vtable->getParent(), builder, name, arg);
+	return cool_program::call_global(_vtable->getParent(), builder, name, args);
 }
 
 // ========= cool_program =======================================
@@ -361,16 +362,17 @@ llvm::Constant* lcool::cool_program::create_string_literal(std::string content, 
 	return llvm::ConstantExpr::getBitCast(literal_var, str_type);
 }
 
-llvm::CallInst* lcool::cool_program::call_global(llvm::IRBuilder<>& builder, std::string name, llvm::Value* arg)
+llvm::CallInst* lcool::cool_program::call_global(llvm::IRBuilder<>& builder,
+		std::string name, std::initializer_list<llvm::Value*> args)
 {
-	return call_global(module(), builder, name, arg);
+	return call_global(module(), builder, name, args);
 }
 
 llvm::CallInst* lcool::cool_program::call_global(
-	llvm::Module* module, llvm::IRBuilder<>& builder, std::string name, llvm::Value* arg)
+	llvm::Module* module, llvm::IRBuilder<>& builder, std::string name, std::initializer_list<llvm::Value*> args)
 {
 	auto to_call = module->getFunction(name);
-	auto call_inst = builder.CreateCall(to_call, arg);
+	auto call_inst = builder.CreateCall(to_call, args);
 	call_inst->setCallingConv(to_call->getCallingConv());
 	return call_inst;
 }

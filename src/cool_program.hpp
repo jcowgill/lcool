@@ -322,8 +322,8 @@ namespace lcool
 		/** Returns the function pointed to by the nth item in this class's Object vtable */
 		llvm::Function* get_object_vtable_func(unsigned index);
 
-		/** Calls a global function with one argument */
-		llvm::CallInst* call_global(llvm::IRBuilder<>& builder, std::string name, llvm::Value* arg) const;
+		/** Calls a global function */
+		llvm::CallInst* call_global(llvm::IRBuilder<>& builder, std::string name, std::initializer_list<llvm::Value*> args) const;
 	};
 
 	/**
@@ -398,20 +398,20 @@ namespace lcool
 		llvm::Constant* create_string_literal(std::string content, std::string name = "");
 
 		/**
-		 * Calls a global function with one argument
+		 * Calls a global function
 		 *
 		 * A global function is one defined by lcool_runtime and is always available.
 		 * Do not invoke class methods with this!
 		 *
 		 * @param builder the ir builder to insert the call into
 		 * @param name the name of the function to call
-		 * @param arg the single argument to pass to it
+		 * @param arg the arguments to pass to it
 		 * @return the call instance
 		 */
-		llvm::CallInst* call_global(llvm::IRBuilder<>& builder, std::string name, llvm::Value* arg);
+		llvm::CallInst* call_global(llvm::IRBuilder<>& builder, std::string name, std::initializer_list<llvm::Value*> args);
 
 		static llvm::CallInst* call_global(
-			llvm::Module* module, llvm::IRBuilder<>& builder, std::string name, llvm::Value* arg);
+			llvm::Module* module, llvm::IRBuilder<>& builder, std::string name, std::initializer_list<llvm::Value*> args);
 
 	private:
 		std::unordered_map<std::string, unique_ptr<cool_class>> _classes;
