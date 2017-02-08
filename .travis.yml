@@ -10,6 +10,8 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
+      - llvm-toolchain-trusty-3.9
+      - llvm-toolchain-trusty-4.0
     packages:
       - libboost-dev
       - libboost-program-options-dev
@@ -29,6 +31,8 @@ env:
     - CTEST_OUTPUT_ON_FAILURE=1
   matrix:
     - LLVM_VERSION=3.8
+    - LLVM_VERSION=3.9
+    - LLVM_VERSION=4.0
 
 # Main build scripts
 install:
