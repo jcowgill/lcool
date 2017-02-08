@@ -76,9 +76,6 @@ namespace lcool
 	 *
 	 * Each time a subclass overrides a method, a new instance of this class is
 	 * created but the old instance of cool_method_slot is reused.
-	 *
-	 * The memory allocated for the method's slot is owned by the base method
-	 * (ie the method where declaring_class == slot.declaring_class).
 	 */
 	class cool_method
 	{
@@ -165,6 +162,9 @@ namespace lcool
 		cool_method() = default;
 		cool_method(const cool_method&) = delete;
 		cool_method& operator=(const cool_method&) = delete;
+
+		// True if this method owns the memory used for _slot
+		bool _slot_owner;
 
 		cool_method_slot* _slot;
 		cool_class* _declaring_class;

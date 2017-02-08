@@ -27,21 +27,20 @@ using namespace lcool;
 // ========= cool_method =========================================
 
 lcool::cool_method::cool_method(std::unique_ptr<cool_method_slot> slot, llvm::Function* func)
-	: _func(func)
+	: _slot_owner(true), _func(func)
 {
 	_slot = slot.release();
 	_declaring_class = _slot->declaring_class;
 }
 
 lcool::cool_method::cool_method(cool_class* declaring_class, cool_method* base_method, llvm::Function* func)
-	: _slot(base_method->slot()), _declaring_class(declaring_class), _func(func)
+	: _slot_owner(false), _slot(base_method->slot()), _declaring_class(declaring_class), _func(func)
 {
 }
 
 lcool::cool_method::~cool_method()
 {
-	// Delete slot if non-null and we own it
-	if (_slot != nullptr && _slot->declaring_class == _declaring_class)
+	if (_slot_owner)
 		delete _slot;
 }
 
