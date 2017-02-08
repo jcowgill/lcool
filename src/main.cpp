@@ -132,7 +132,15 @@ int main(int argc, char* argv[])
 		return 1;
 
 	// Verify module
-	llvm::verifyModule(*output.module());
+	std::string verify_errors_str;
+	llvm::raw_string_ostream verify_errors { verify_errors_str };
+
+	if (llvm::verifyModule(*output.module(), &verify_errors))
+	{
+		log.error("internal compiler error: llvm verify failed");
+		std::clog << verify_errors.str();
+		return 1;
+	}
 
 	// Get output filename
 	std::string out_filename;
