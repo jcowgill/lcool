@@ -614,7 +614,7 @@ public:
 		 *
 		 * Failing branch test block:
 		 *  = Used if no default case
-		 *  - Calls abort_with_message
+		 *  - Call abort_case
 		 *
 		 * Branch value blocks:
 		 *  = One for each case branch
@@ -716,11 +716,8 @@ public:
 		}
 
 		// Write fail block
-		auto abort_with_msg = _program.module()->getGlobalVariable("abort_with_msg");
-		auto err_case = _program.module()->getGlobalVariable("err_case");
 		_builder.SetInsertPoint(fail_block);
-		_builder.CreateCall(abort_with_msg,
-			_builder.CreateInBoundsGEP(err_case, { _builder.getInt32(0), _builder.getInt32(0) }));
+		_program.call_global(_builder, "abort_case", {});
 		_builder.CreateUnreachable();
 
 		// Done!

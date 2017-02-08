@@ -48,6 +48,7 @@
 ; ====================
 ; (all Object and IO functions are called through a vtable)
 ;
+; abort_case
 ; instance_of
 ; new_object
 ; null_check
@@ -249,6 +250,13 @@ define hidden fastcc void @abort_with_msg(i8* %msg) noreturn
 	call i32 @fputs(i8* %msg, %IO$File* %stderr)
 	call i32 @fputc(i32 10, %IO$File* %stderr)
 	call void @exit(i32 1)
+	unreachable
+}
+
+; Abort with a case error message
+define hidden fastcc void @abort_case()
+{
+	call fastcc void @abort_with_msg(i8* getelementptr inbounds ([29 x i8], [29 x i8]* @err_case, i32 0, i32 0))
 	unreachable
 }
 
