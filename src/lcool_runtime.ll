@@ -661,10 +661,6 @@ define hidden fastcc i1 @Bool$unbox(%Object* %value) inlinehint
 ; Returns the string's length
 define hidden fastcc i32 @String.length(%String* %this) inlinehint
 {
-	; Test for null string
-	%this_as_object = getelementptr inbounds %String, %String* %this, i32 0, i32 0
-	call fastcc void @null_check(%Object* %this_as_object)
-
 	; Return length
 	%length_ptr = getelementptr inbounds %String, %String* %this, i32 0, i32 1
 	%length = load i32, i32* %length_ptr
@@ -674,9 +670,7 @@ define hidden fastcc i32 @String.length(%String* %this) inlinehint
 ; Concatenates two strings
 define hidden fastcc %String* @String.concat(%String* %this, %String* %other)
 {
-	; Test if any inputs are null
-	%this_as_object = getelementptr inbounds %String, %String* %this, i32 0, i32 0
-	call fastcc void @null_check(%Object* %this_as_object)
+	; Test if other is null (this should have already been checked)
 	%other_as_object = getelementptr inbounds %String, %String* %other, i32 0, i32 0
 	call fastcc void @null_check(%Object* %other_as_object)
 
@@ -706,10 +700,6 @@ define hidden fastcc %String* @String.concat(%String* %this, %String* %other)
 ; Extracts a substring of this string
 define hidden fastcc %String* @String.substr(%String* %this, i32 %i, i32 %l)
 {
-	; Test for null string
-	%this_as_object = getelementptr inbounds %String, %String* %this, i32 0, i32 0
-	call fastcc void @null_check(%Object* %this_as_object)
-
 	; Get original string length
 	%this_len_ptr = getelementptr inbounds %String, %String* %this, i32 0, i32 1
 	%this_len = load i32, i32* %this_len_ptr
