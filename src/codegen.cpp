@@ -641,6 +641,7 @@ public:
 
 		// Create failing and phi blocks
 		auto fail_block = llvm::BasicBlock::Create(context, "case_fail", _func);
+		auto phi_block = llvm::BasicBlock::Create(context, "case_phi", _func);
 		cool_class* final_upcast_cls = nullptr;
 
 		for (size_t i = 0; i < sorted_branches.size(); i++)
@@ -686,13 +687,14 @@ public:
 				_builder.CreateCondBr(call_inst, value_block_enter, next_test_block);
 			}
 
-			// Create value block except for final upcast
+			// Create value block and jump to phi block
 			_builder.SetInsertPoint(value_block_enter);
 			auto value_downcast = branch_data.cls->downcast(_builder, value.value);
 #warning Do let id = value_downcast (refactor let a bit)
 
 			branch_data.result = evaluate(*branch_data.branch->body);
 			branch_data.value_block_exit = _builder.GetInsertBlock();
+			_builder.CreateBr(phi_block);
 
 			// Update final upcast class
 			if (final_upcast_cls == nullptr)
@@ -701,8 +703,7 @@ public:
 				final_upcast_cls = cool_class::common_ancestor(final_upcast_cls, branch_data.result.cls);
 		}
 
-		// Perform upcasts, jumps and create final phi block
-		auto phi_block = llvm::BasicBlock::Create(context, "case_phi", _func);
+		// Perform upcasts and create phi node
 		_builder.SetInsertPoint(phi_block);
 		auto phi = _builder.CreatePHI(final_upcast_cls->llvm_type(), sorted_branches.size());
 
