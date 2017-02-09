@@ -427,6 +427,7 @@ public:
 		_builder.CreateBr(block_predicate);
 
 		// Generate predicate code
+		_builder.SetInsertPoint(block_predicate);
 		auto value_predicate = evaluate(*expr.predicate);
 		if (value_predicate.cls != _builtin_bool)
 		{
