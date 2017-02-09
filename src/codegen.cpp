@@ -1112,7 +1112,7 @@ void gen_method(const ast::method& input, cool_program& output, cool_class* cls,
 #warning how does refcounting work with these vars
 	assert(!func_args.empty());
 	llvm::Value* self_ptr = builder.CreateAlloca(cls->llvm_type());
-	llvm::Value* self = method->slot()->declaring_class->downcast(builder, func_args[0]);
+	llvm::Value* self = cls->downcast(builder, func_args[0]);
 	builder.CreateStore(self, self_ptr);
 	the_generator.add_argument("self", { self_ptr, cls });
 
