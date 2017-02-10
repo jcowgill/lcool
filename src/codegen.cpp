@@ -92,6 +92,13 @@ public:
 		_vars.resize(_vars.size() - n);
 	}
 
+	// Returns the variable on the top of the stack
+	value_and_cls top()
+	{
+		assert(!_vars.empty());
+		return _vars[_vars.size() - 1].second;
+	}
+
 	// Looks up a variable in the stack or returns boost::none if it
 	//  doesn't exist
 	boost::optional<value_and_cls> get(std::string name)
@@ -144,6 +151,44 @@ private:
 
 	// Dummy self node
 	const ast::identifier _ast_self = create_dummy_identifier("self");
+
+	// Pushes a new variable onto the variables stack
+	//  Memory is allocated at runtime for this variable
+	//  Returns the variable's POINTER value or null on error
+	llvm::Value* push_new_variable(const location& loc, std::string id, cool_class* cls)
+	{
+		// Check for "self" name
+		if (id == "self")
+		{
+			_log.error(loc, "illegal variable name 'self'");
+			return nullptr;
+		}
+
+		// Fetch init block
+		auto init_block = &_func->front();
+		assert(init_block->getName().equals("init"));
+
+		// Allocate some memory for this variable
+		auto saved_block = _builder.GetInsertBlock();
+		_builder.SetInsertPoint(init_block);
+
+		value_and_cls pointer_value;
+		pointer_value.value = _builder.CreateAlloca(cls->llvm_type(), nullptr, id);
+		pointer_value.cls = cls;
+		_builder.SetInsertPoint(saved_block);
+
+		// Push variable onto stack
+		_locals.push(id, pointer_value);
+		return pointer_value.value;
+	}
+
+	// Pops the most recent variables created by push_new_variable
+	void pop_new_variables(unsigned n = 1)
+	{
+#warning Handle refcounting (discarding objects)
+		// Pop variables gone out of scope
+		_locals.pop(n);
+	}
 
 public:
 	// Initializes the expression code generator from a class and llvm function
@@ -472,13 +517,6 @@ public:
 			if (var.initial)
 				initializer = evaluate(*var.initial);
 
-			// Check for "self" name
-			if (var.name == "self")
-			{
-				_log.error(var.loc, "illegal variable name 'self'");
-				continue;
-			}
-
 			// Lookup class
 			cool_class* cls = _program.lookup_class(var.type);
 			if (cls == nullptr)
@@ -503,28 +541,17 @@ public:
 				}
 			}
 
-			// Allocate some memory for this variable
-			auto saved_block = _builder.GetInsertBlock();
-			_builder.SetInsertPoint(init_block);
-
-			value_and_cls pointer_value;
-			pointer_value.value = _builder.CreateAlloca(cls->llvm_type(), nullptr, var.name);
-			pointer_value.cls = cls;
-			_builder.SetInsertPoint(saved_block);
-
-			// Store value
-			_builder.CreateStore(initializer.value, pointer_value.value);
-
-			// Push variable onto stack
-			_locals.push(var.name, pointer_value);
+			// Push new variable onto the stack and initialize it
+			llvm::Value* var_ptr = push_new_variable(var.loc, var.name, cls);
+			if (var_ptr != nullptr)
+				_builder.CreateStore(initializer.value, var_ptr);
 		}
 
 		// Evaluate body
 		_result = evaluate(*expr.body);
 
-#warning Handle refcounting (discarding objects)
 		// Pop variables gone out of scope
-		_locals.pop(expr.vars.size());
+		pop_new_variables(expr.vars.size());
 	}
 
 	// Internal data used to construct case expressions
