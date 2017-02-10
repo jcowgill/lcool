@@ -709,7 +709,7 @@ public:
 				// Normal branch
 				auto call_inst = _builder.CreateCall(func_instance_of, {
 					value.cls->upcast_to_object(_builder, value.value),
-					branch_data.cls->upcast_to_object(_builder, branch_data.cls->llvm_vtable())
+					branch_data.cls->llvm_object_vtable()
 				});
 				_builder.CreateCondBr(call_inst, value_block_enter, next_test_block);
 			}

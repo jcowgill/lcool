@@ -241,6 +241,11 @@ namespace lcool
 		}
 
 		/**
+		 * Returns a pointer to the LLVM vtable object upcasted to $Object$vtabletype*
+		 */
+		llvm::Constant* llvm_object_vtable();
+
+		/**
 		 * Creates an instance of this object
 		 *
 		 * All attributes will be initialized to their default values.
@@ -252,7 +257,7 @@ namespace lcool
 		/**
 		 * Upcasts an object of this class's type to one of it's parent types
 		 *
-		 * This may also be used to upcast vtables.
+		 * This may NOT be used to upcast vtables.
 		 *
 		 * For Int and Bool, upcasting to Object will box the value.
 		 * @return the upcasted value or nullptr if to is not a subclass of this class

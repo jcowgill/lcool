@@ -169,6 +169,17 @@ std::vector<cool_method*> lcool::cool_class::methods()
 	return result;
 }
 
+llvm::Constant* lcool::cool_class::llvm_object_vtable()
+{
+	// Bitcast vtable to %Object$vtabletype*
+	//  We can't use upcast_to due to Ints and Bools overriding it
+	auto vtable = llvm_vtable();
+	auto vtable_type = vtable->getParent()->getTypeByName("Object$vtabletype");
+	assert(vtable_type != nullptr);
+
+	return llvm::ConstantExpr::getBitCast(vtable, vtable_type->getPointerTo());
+}
+
 llvm::Value* lcool::cool_class::create_object(llvm::IRBuilder<>& builder) const
 {
 	// Invoke new_object on vtable pointer
