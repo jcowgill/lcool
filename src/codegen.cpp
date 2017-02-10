@@ -716,10 +716,17 @@ public:
 
 			// Create value block and jump to phi block
 			_builder.SetInsertPoint(value_block_enter);
-			auto value_downcast = branch_data.cls->downcast(_builder, value.value);
-#warning Do let id = value_downcast (refactor let a bit)
+			llvm::Value* var_ptr = push_new_variable(expr.loc, branch_data.branch->id, branch_data.cls);
+			if (var_ptr != nullptr)
+			{
+				auto value_downcast = branch_data.cls->downcast(_builder, value.value);
+				_builder.CreateStore(value_downcast, var_ptr);
+			}
 
 			branch_data.result = evaluate(*branch_data.branch->body);
+			if (var_ptr != nullptr)
+				pop_new_variables();
+
 			branch_data.value_block_exit = _builder.GetInsertBlock();
 			_builder.CreateBr(phi_block);
 
